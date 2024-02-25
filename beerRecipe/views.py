@@ -6,7 +6,7 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 
 # Create your views here.
 def index(request):
-    return render(request, 'beerRecipe/root.html')
+    return render(request, 'beerRecipe/login.html')
 
 
 @login_required
@@ -17,6 +17,7 @@ def login_user(request):
         if form.is_valid():
             user = form.get_user()
             login(request, user)
+            print('done')
             return redirect('root')
 
         else:
