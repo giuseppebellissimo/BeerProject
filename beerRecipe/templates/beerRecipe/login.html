@@ -1,4 +1,5 @@
 {% extends "beerRecipe/base.html" %}
+{% load crispy_forms_filters %}
 
 
 {% block content %}
@@ -33,19 +34,10 @@
     <div class="centered-form">
         <div class="card bg-glass">
             <div class="card-body">
-                <form>
+                <form method="post" action="" novalidate>
                     <h1 class="text-center mb-4">Login</h1>
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email"
-                               placeholder="name@email.com">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" id="password" class="form-control"
-                               aria-describedby="passwordHelpBlock" placeholder="password">
-                    </div>
+                    {% csrf_token %}
+                    {{ form|crispy }}
 
                     <div class="mb-3 text-center">
                         <button type="submit" class="btn btn-primary w-100">Login</button>
