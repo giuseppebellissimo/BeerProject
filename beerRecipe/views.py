@@ -3,7 +3,8 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.shortcuts import render, redirect
-from .forms import NewUserForm
+from .forms import NewUserForm, AddRecipeForm
+from .models import Recipe
 
 
 # Create your views here.
@@ -18,7 +19,6 @@ def login_user(request):
 
         if user is not None:
             login(request, user)
-            messages.success(request, f'Hi {username.title()}, welcome back!')
             return redirect('home')
         else:
             form = AuthenticationForm()
@@ -40,9 +40,12 @@ def signup(request):
             username = form.cleaned_data['username']
             password = form.cleaned_data['password1']
             user = authenticate(username=username, password=password)
-            login(request, user)
+            if user is not None:
+                messages.success(request, f'Welcome {username.title()}, your account has been created successfully!')
+                login(request, user)
             return redirect('home')
         else:
+            messages.error(request, f'Fill in the form fields correctly')
             return render(request, 'beerRecipe/signup.html', {'error': form.errors})
     else:
         form = NewUserForm()
@@ -56,8 +59,19 @@ def logout_user(request):
 
 @login_required
 def home(request):
-
     if request.method == 'POST':
-        login_user(request)
-
-    return render(request, 'beerRecipe/home.html')
+        if 'submit_recipe' in request.POST:
+            recipe_form = AddRecipeForm(request.POST)
+            if recipe_form.is_valid():
+                recipe = recipe_form.save(commit=False)
+                recipe.id_user = request.user
+                recipe.save()
+                messages.success(request, f'Your recipe has been')
+                return redirect('home')
+            else:
+                messages.error(request, f'Fill in the form fields correctly')
+                return render(request, 'beerRecipe/home.html', {'error': recipe_form.errors})
+    else:
+        recipe_form = AddRecipeForm()
+        recipe = Recipe.objects.all()
+        return render(request, 'beerRecipe/home.html', {'recipes': recipe, 'recipe_form': recipe_form})
