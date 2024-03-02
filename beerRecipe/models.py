@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from django.db import models
-from django.db.models import JSONField
+from django_yaml_field import YAMLField
 
 
 # Create your models here.
@@ -10,13 +10,20 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        verbose_name_plural = "Categories"
+
 
 class Ingredient(models.Model):
+    name = models.CharField(max_length=100)
     id_category = models.ForeignKey(Category, on_delete=models.CASCADE)
-    property = JSONField()
+    property = YAMLField()
 
     def __str__(self):
-        return self.id_category
+        return self.name
+
+    class Meta:
+        verbose_name_plural = "Ingredients"
 
 
 class Recipe(models.Model):
@@ -28,10 +35,9 @@ class Recipe(models.Model):
     ingredients = models.ManyToManyField(Ingredient, through='IngredientRecipe')
 
     def __str__(self):
-        return self.name
+        return f'{self.name} - {self.litre} - {self.ebc} - {self.ibu}'
 
     class Meta:
-        verbose_name = 'Recipe'
         verbose_name_plural = "Recipes"
 
 
@@ -45,13 +51,21 @@ class Inventory(models.Model):
         return f'Inventory of {''.join(str(Users.username) for Users in self.id_user.all())}'
 
     class Meta:
-        verbose_name = 'Inventory'
         verbose_name_plural = 'Inventories'
         ordering = ['-creation_date']
 
 
 class Step(models.Model):
     id_recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+    index = models.IntegerField()
+    name = models.CharField(max_length=200)
+    description = models.TextField()
+
+    def __str__(self):
+        return f'{self.index} - {self.name} - {self.description}'
+
+    class Meta:
+        verbose_name_plural = 'Steps'
 
 
 class IngredientRecipe(models.Model):

@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from beerRecipe.models import Recipe
+from beerRecipe.models import Recipe, Step
 
 
 class NewUserForm(UserCreationForm):
@@ -26,3 +26,9 @@ class AddRecipeForm(forms.ModelForm):
     class Meta:
         model = Recipe
         fields = ['name', 'litre', 'ebc', 'ibu']
+
+
+class AddStepForm(forms.ModelForm):
+    class Meta:
+        model = Step
+        fields = ['index', 'name', 'description']

@@ -59,19 +59,48 @@ def logout_user(request):
 
 @login_required
 def home(request):
+    recipes = Recipe.objects.all()
+    return render(request, 'beerRecipe/home.html', {'recipes': recipes})
+
+
+@login_required
+def add_recipe(request):
     if request.method == 'POST':
-        if 'submit_recipe' in request.POST:
-            recipe_form = AddRecipeForm(request.POST)
-            if recipe_form.is_valid():
-                recipe = recipe_form.save(commit=False)
-                recipe.id_user = request.user
-                recipe.save()
-                messages.success(request, f'Your recipe has been')
-                return redirect('home')
-            else:
-                messages.error(request, f'Fill in the form fields correctly')
-                return render(request, 'beerRecipe/home.html', {'error': recipe_form.errors})
+        recipe_form = AddRecipeForm(request.POST)
+        if recipe_form.is_valid():
+            recipe = recipe_form.save(commit=False)
+            recipe.id_user = request.user
+            recipe.save()
+            return redirect('home')
+        else:
+            return render(request, 'beerRecipe/addRecipe.html', {'error': recipe_form.errors})
     else:
         recipe_form = AddRecipeForm()
-        recipe = Recipe.objects.all()
-        return render(request, 'beerRecipe/home.html', {'recipes': recipe, 'recipe_form': recipe_form})
+        return render(request, 'beerRecipe/addRecipe.html', {'recipe_form': recipe_form})
+
+
+def delete_recipe(request, recipe_id):
+    recipe = Recipe.objects.get(id=recipe_id)
+    recipe.delete()
+    return redirect('home')
+
+
+def edit_recipe(request, recipe_id):
+    recipe = Recipe.objects.get(id=recipe_id)
+
+    if request.method == 'POST':
+        recipe_form = AddRecipeForm(request.POST, instance=recipe)
+        if recipe_form.is_valid():
+            recipe = recipe_form.save(commit=False)
+            recipe.id_user = request.user
+            recipe.save()
+            return redirect('home')
+        else:
+            return render(request, 'beerRecipe/addRecipe.html', {'error': recipe_form.errors})
+    else:
+        recipe_form = AddRecipeForm(instance=recipe)
+        return render(request, 'beerRecipe/addRecipe.html', {'recipe_form': recipe_form})
+
+
+def add_step(request, recipe_id):
+    recipe = Recipe.objects.get(id=recipe_id)

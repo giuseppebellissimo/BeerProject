@@ -13,83 +13,78 @@
                     <li class="list-group-item">No recipes found. Add a new recipe...</li>
                 {% endfor %}
             </ul>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" ,
-                    data-bs-target="#addInventory" style="margin-top: 5px">Add Inventory
+            <button type="button" class="btn btn-primary" style="margin-top: 5px">Add Ingredients
             </button>
-
-            <!-- Modal for Inventory-->
         </div>
     </div>
 
     <div class="card" style="margin: 10px">
         <div class="card-body">
             <h5 class="card-title">Recipes</h5>
-            <ul class="list-group list-group-flush">
+            <div class="accordion accordion-flush" id="accordionFlushRecipe">
                 {% for recipe in recipes %}
-                    <li class="list-group-item">{{ recipe.name }}</li>
+                    <div class="accordion-item" style="margin-bottom: 5px">
+                        <h2 class="accordion-header d-flex justify-content-between">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#flush-collapse{{ recipe.id }}" aria-expanded="false"
+                                    aria-controls="flush-collapse{{ recipe.id }}">
+                                {{ recipe.name }}
+                            </button>
+
+                            <div class="btn-group" role="group" aria-label="Basic outlined example">
+                                <a class="btn btn-outline-primary" , style="height: fit-content">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a class="btn btn-outline-secondary" , style="height: fit-content"
+                                   href="{% url 'edit_recipe' recipe.id %}">
+                                    <i class="bi bi-eye-fill"></i>
+                                </a>
+                                <a class="btn btn-outline-danger" , style="height: fit-content" data-bs-toggle="modal"
+                                   data-bs-target="#deleteRecipe">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+
+                                <!-- Modal for delete recipe-->
+                                <div class="modal fade" id="deleteRecipe" data-bs-backdrop="static"
+                                     data-bs-keyboard="false" tabindex="-1"
+                                     aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h1 class="modal-title fs-5" id="staticBackdropLabel">Delete Recipe</h1>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                        aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                Are you sure you want to delete the recipe?
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                    Close
+                                                </button>
+                                                <a class="btn btn-danger" href="{% url 'delete_recipe' recipe.id %}">Confirm</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </h2>
+                        <div id="flush-collapse{{ recipe.id }}" class="accordion-collapse collapse"
+                             data-bs-parent="#accordionFlushrecipe">
+                            <div class="accordion-body">
+                                <p>Litre: {{ recipe.litre }}</p>
+                                <p>EBC: {{ recipe.litre }}</p>
+                                <p>IBU: {{ recipe.litre }}</p>
+                            </div>
+                        </div>
+                    </div>
                 {% empty %}
                     <li class="list-group-item">No recipes found. Add a new recipe...</li>
                 {% endfor %}
-            </ul>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" , data-bs-target="#addRecipe"
-                    style="margin-top: 5px">
+            </div>
+            <a class="btn btn-primary" style="margin-top: 15px" href="{% url 'recipes' %}">
                 Add Recipe
-            </button>
-
-            <!-- Modal for Recipe -->
-            <div class="modal fade" id="addRecipe" aria-hidden="true" aria-labelledby="exampleModalToggleLabel"
-                 tabindex="-1">
-                <div class="modal-dialog modal-dialog-centered modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h1 class="modal-title fs-5" id="exampleModalToggleLabel">Add Recipe</h1>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                    aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <!-- form for recipe-->
-                            <form method="post" action="{% url 'home' %}">
-                                {% csrf_token %}
-                                {{ recipe_form|crispy }}
-                                <button type="submit" name="submit_recipe" class="btn btn-primary">Save
-                                    changes
-                                </button>
-
-                            </form>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close
-                            </button>
-                            <button class="btn btn-light" data-bs-target="#exampleModalToggle2"
-                                    data-bs-toggle="modal">Add
-                                Ingredient
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal fade" id="exampleModalToggle2" aria-hidden="true"
-                 aria-labelledby="exampleModalToggleLabel2"
-                 tabindex="-1">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h1 class="modal-title fs-5" id="exampleModalToggleLabel2">Modal 2</h1>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                    aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            Hide this modal and show the first with the button below.
-                        </div>
-                        <div class="modal-footer">
-                            <button class="btn btn-primary" data-bs-target="#exampleModalToggle"
-                                    data-bs-toggle="modal">Back
-                                to first
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            </a>
         </div>
     </div>
 
