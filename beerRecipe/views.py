@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.shortcuts import render, redirect
-from .forms import NewUserForm, AddRecipeForm
+from .forms import NewUserForm, AddRecipeForm, AddStepForm, IngredientRecipeFormSet
 from .models import Recipe
 
 
@@ -71,12 +71,21 @@ def add_recipe(request):
             recipe = recipe_form.save(commit=False)
             recipe.id_user = request.user
             recipe.save()
-            return redirect('home')
+
+            formset = IngredientRecipeFormSet(request.POST, instance=recipe)
+            if formset.is_valid():
+                formset.save()
+                recipe_instance = Recipe.objects.get(id=recipe.id)
+                recipe_id = recipe_instance.id
+                return redirect('edit_recipe', recipe_id)
+            else:
+                pass
         else:
             return render(request, 'beerRecipe/addRecipe.html', {'error': recipe_form.errors})
     else:
         recipe_form = AddRecipeForm()
-        return render(request, 'beerRecipe/addRecipe.html', {'recipe_form': recipe_form})
+        formset = IngredientRecipeFormSet()
+        return render(request, 'beerRecipe/addRecipe.html', {'recipe_form': recipe_form, 'formset': formset})
 
 
 def delete_recipe(request, recipe_id):
@@ -94,13 +103,30 @@ def edit_recipe(request, recipe_id):
             recipe = recipe_form.save(commit=False)
             recipe.id_user = request.user
             recipe.save()
-            return redirect('home')
+            recipe_instance = Recipe.objects.get(id=recipe.id)
+            id_recipe = recipe_instance.id
+            return redirect('edit_recipe', id_recipe)
         else:
-            return render(request, 'beerRecipe/addRecipe.html', {'error': recipe_form.errors})
+            return render(request, 'beerRecipe/addRecipeId.html', {'error': recipe_form.errors, 'recipe': recipe})
     else:
         recipe_form = AddRecipeForm(instance=recipe)
-        return render(request, 'beerRecipe/addRecipe.html', {'recipe_form': recipe_form})
+        return render(request, 'beerRecipe/addRecipeId.html', {'recipe_form': recipe_form, 'recipe': recipe})
 
 
 def add_step(request, recipe_id):
     recipe = Recipe.objects.get(id=recipe_id)
+
+    if request.method == 'POST':
+        step_form = AddStepForm(request.POST)
+        if step_form.is_valid():
+            step = step_form.save(commit=False)
+            step.id_recipe = recipe
+            step.save()
+            recipe_instance = Recipe.objects.get(id=recipe.id)
+            id_recipe = recipe_instance.id
+            return redirect('steps', id_recipe)
+        else:
+            return render(request, 'beerRecipe/addStep.html', {'error': step_form.errors, 'recipe': recipe})
+    else:
+        step_form = AddStepForm()
+        return render(request, 'beerRecipe/addStep.html', {'step_form': step_form, 'recipe': recipe})

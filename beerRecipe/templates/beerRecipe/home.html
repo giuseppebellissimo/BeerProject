@@ -32,11 +32,11 @@
                             </button>
 
                             <div class="btn-group" role="group" aria-label="Basic outlined example">
-                                <a class="btn btn-outline-primary" , style="height: fit-content">
+                                <a class="btn btn-outline-primary" , style="height: fit-content"
+                                   href="{% url 'edit_recipe' recipe.id %}">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <a class="btn btn-outline-secondary" , style="height: fit-content"
-                                   href="{% url 'edit_recipe' recipe.id %}">
+                                <a class="btn btn-outline-secondary" , style="height: fit-content">
                                     <i class="bi bi-eye-fill"></i>
                                 </a>
                                 <a class="btn btn-outline-danger" , style="height: fit-content" data-bs-toggle="modal"
@@ -73,8 +73,8 @@
                              data-bs-parent="#accordionFlushrecipe">
                             <div class="accordion-body">
                                 <p>Litre: {{ recipe.litre }}</p>
-                                <p>EBC: {{ recipe.litre }}</p>
-                                <p>IBU: {{ recipe.litre }}</p>
+                                <p>EBC: {{ recipe.ebc }}</p>
+                                <p>IBU: {{ recipe.ibu }}</p>
                             </div>
                         </div>
                     </div>

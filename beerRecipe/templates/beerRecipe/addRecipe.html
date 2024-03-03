@@ -6,9 +6,9 @@
         <form method="post" action="{% url 'recipes' %}">
             {% csrf_token %}
             {{ recipe_form|crispy }}
-            <button type="submit" class="btn btn-primary">Save changes</button>
-            <a class="btn btn-primary">Add Step</a>
-            <a class="btn btn-primary">Add Ingredients</a>
+            {{ formset.management_form }}
+            {{ formset|crispy }}
+            <button type="submit" class="btn btn-primary">Save</button>
             <a class="btn btn-secondary" href="{% url 'home' %}">Cancel</a>
         </form>
     </div>
