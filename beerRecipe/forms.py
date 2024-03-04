@@ -1,9 +1,8 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from django.forms import inlineformset_factory
 
-from beerRecipe.models import Recipe, Step, IngredientRecipe
+from beerRecipe.models import Recipe, Step, Inventory
 
 
 class NewUserForm(UserCreationForm):
@@ -35,5 +34,7 @@ class AddStepForm(forms.ModelForm):
         fields = ['index', 'name', 'description']
 
 
-IngredientRecipeFormSet = inlineformset_factory(
-    Recipe, IngredientRecipe, fields=('quantity', 'measurement_unit'), extra=1, can_delete=False)
+class AddInventoryForm(forms.ModelForm):
+    class Meta:
+        model = Inventory
+        fields = ['name']

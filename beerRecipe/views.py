@@ -2,9 +2,10 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.models import User
 from django.shortcuts import render, redirect
-from .forms import NewUserForm, AddRecipeForm, AddStepForm, IngredientRecipeFormSet
-from .models import Recipe
+from .forms import NewUserForm, AddRecipeForm, AddStepForm, AddInventoryForm
+from .models import Recipe, Step, Inventory, Ingredient
 
 
 # Create your views here.
@@ -60,10 +61,11 @@ def logout_user(request):
 @login_required
 def home(request):
     recipes = Recipe.objects.all()
-    return render(request, 'beerRecipe/home.html', {'recipes': recipes})
+    steps = Step.objects.all()
+    inventories = Inventory.objects.all()
+    return render(request, 'beerRecipe/home.html', {'recipes': recipes, 'steps': steps, 'inventories': inventories})
 
 
-@login_required
 def add_recipe(request):
     if request.method == 'POST':
         recipe_form = AddRecipeForm(request.POST)
@@ -71,21 +73,11 @@ def add_recipe(request):
             recipe = recipe_form.save(commit=False)
             recipe.id_user = request.user
             recipe.save()
-
-            formset = IngredientRecipeFormSet(request.POST, instance=recipe)
-            if formset.is_valid():
-                formset.save()
-                recipe_instance = Recipe.objects.get(id=recipe.id)
-                recipe_id = recipe_instance.id
-                return redirect('edit_recipe', recipe_id)
-            else:
-                pass
         else:
             return render(request, 'beerRecipe/addRecipe.html', {'error': recipe_form.errors})
     else:
         recipe_form = AddRecipeForm()
-        formset = IngredientRecipeFormSet()
-        return render(request, 'beerRecipe/addRecipe.html', {'recipe_form': recipe_form, 'formset': formset})
+        return render(request, 'beerRecipe/addRecipe.html', {'recipe_form': recipe_form})
 
 
 def delete_recipe(request, recipe_id):
@@ -130,3 +122,24 @@ def add_step(request, recipe_id):
     else:
         step_form = AddStepForm()
         return render(request, 'beerRecipe/addStep.html', {'step_form': step_form, 'recipe': recipe})
+
+
+def add_inventory(request):
+    if request.method == 'POST':
+        inventory_form = AddInventoryForm(request.POST)
+        if inventory_form.is_valid():
+            names = inventory_form.cleaned_data.get('name')
+            users = User.objects.filter(id=request.user.id)
+            instance = Inventory.objects.create(name=names)
+            instance.id_user.set(users)
+
+            return redirect('home')
+        else:
+            return render(request, 'beerRecipe/addInventory.html', {'error': inventory_form.errors})
+    else:
+        inventory_form = AddInventoryForm()
+        return render(request, 'beerRecipe/addInventory.html', {'inventory_form': inventory_form})
+
+
+def inventory(request):
+    return render(request, 'beerRecipe/inventory.html')

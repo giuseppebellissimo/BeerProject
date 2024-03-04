@@ -43,12 +43,10 @@ class Recipe(models.Model):
 
 class Inventory(models.Model):
     id_user = models.ManyToManyField(User)
+    name = models.CharField(max_length=200)
     last_update = models.DateTimeField(auto_now=True)
     creation_date = models.DateTimeField(auto_now_add=True)
     ingredients = models.ManyToManyField(Ingredient, through='InventoryIngredient')
-
-    def __str__(self):
-        return f'Inventory of {''.join(str(Users.username) for Users in self.id_user.all())}'
 
     class Meta:
         verbose_name_plural = 'Inventories'
@@ -66,6 +64,7 @@ class Step(models.Model):
 
     class Meta:
         verbose_name_plural = 'Steps'
+        ordering = ['index']
 
 
 class IngredientRecipe(models.Model):

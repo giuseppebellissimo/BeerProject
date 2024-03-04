@@ -6,15 +6,21 @@
     <div class="card" style="margin: 10px">
         <div class="card-body">
             <h5 class="card-title">Inventories</h5>
-            <ul class="list-group list-group-flush">
+            <ul class="list-group">
                 {% for inventory in inventories %}
-
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <a class="btn btn-link" href="{% url 'inventory' %}">{{ inventory.name }}</a>
+                        <a class="btn btn-danger rounded-pill" style="height: fit-content">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </li>
                 {% empty %}
-                    <li class="list-group-item">No recipes found. Add a new recipe...</li>
+                    <li class="list-group-item">No inventories found. Add a new inventory...</li>
                 {% endfor %}
             </ul>
-            <button type="button" class="btn btn-primary" style="margin-top: 5px">Add Ingredients
-            </button>
+            <a type="button" class="btn btn-primary" style="margin-top: 5px" href="{% url 'add-inventory' %}">Add
+                Inventory
+            </a>
         </div>
     </div>
 
@@ -36,7 +42,8 @@
                                    href="{% url 'edit_recipe' recipe.id %}">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <a class="btn btn-outline-secondary" , style="height: fit-content">
+                                <a class="btn btn-outline-secondary" , style="height: fit-content"
+                                   data-bs-toggle="modal" data-bs-target="#viewSteps{{ recipe.id }}">
                                     <i class="bi bi-eye-fill"></i>
                                 </a>
                                 <a class="btn btn-outline-danger" , style="height: fit-content" data-bs-toggle="modal"
@@ -67,8 +74,35 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Modal for view steps-->
+                                <div class="modal fade" id="viewSteps{{ recipe.id }}" tabindex="-1"
+                                     aria-labelledby="exampleModalLabel" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h1 class="modal-title fs-5"
+                                                    id="exampleModalLabel"> Step of {{ recipe.name }}</h1>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                        aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                {% for step in steps %}
+                                                    <p>{{ step.index }}. {{ step.name }}</p>
+                                                    <p>{{ step.description }}</p>
+                                                {% endfor %}
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                    Close
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </h2>
+                        <!-- View details of recipe -->
                         <div id="flush-collapse{{ recipe.id }}" class="accordion-collapse collapse"
                              data-bs-parent="#accordionFlushrecipe">
                             <div class="accordion-body">
