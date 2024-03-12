@@ -11,5 +11,7 @@ urlpatterns = [
     path('edit-recipe/<int:recipe_id>', views.edit_recipe, name='edit_recipe'),
     path('steps/<int:recipe_id>', views.add_step, name='steps'),
     path('add-inventory', views.add_inventory, name='add-inventory'),
-    path('inventory/', views.inventory, name='inventory'),
+    path('list-ingredient/<int:inventory_id>', views.list_ingredient, name='list_ingredient'),
+    path('add-ingredient-inventory/', views.add_ingredient_to_inventory,
+         name='add-ingredient-inventory'),
 ]

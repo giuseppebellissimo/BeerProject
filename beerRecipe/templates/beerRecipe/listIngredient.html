@@ -1,0 +1,28 @@
+{% extends 'beerRecipe/baseHome.html' %}
+
+{% block content %}
+    {% spaceless %}
+        {% if user.is_authenticated %}
+            <h3>Inventory</h3>
+
+            <table class="table table-striped">
+                <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Quantity</th>
+                    <th scope="col">Measurement Unit</th>
+                    <th scope="col">Expiry date</th>
+                    <th scope="col">Property</th>
+                    <th scope="col">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+
+            <a class="btn btn-primary" type="button" href="{% url 'add-ingredient-inventory' %}">Add
+                Ingredient</a>
+        {% endif %}
+    {% endspaceless %}
+{% endblock %}

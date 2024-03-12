@@ -1,0 +1,152 @@
+{% extends 'beerRecipe/baseHome.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    {% spaceless %}
+        {% if user.is_authenticated %}
+            <form method="post" id="inventory-ingredient-form">
+                {% csrf_token %}
+                {% crispy inventory_ingredient_form %}
+                <hr>
+                <h3>Property</h3>
+                {% csrf_token %}
+                <table class="table table-striped">
+                    {{ property_formset.management_form }}
+                    {% for form in property_formset.forms %}
+                        {% if forloop.first %}
+                            <thead>
+                            <tr>
+                                {% for field in form.visible_fields %}
+                                    <th>{{ field.label|capfirst }}</th>
+                                {% endfor %}
+                            </tr>
+                            </thead>
+                        {% endif %}
+                        <tr class="{% cycle 'row1' 'row2' %} property_formset_row">
+                            {% if forloop.first or forloop.second or forloop.third %}
+                                <td>{{ form.name.as_hidden }}{{ form.name.value }}</td>
+                            {% else %}
+                                <td>{{ form.name }}</td>
+                            {% endif %}
+                            <td>{{ form.value }}</td>
+                            <td>{{ form.delete }}</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+                <hr>
+                <input id="saveIngredientButton" class="btn btn-success" type="submit" value="Save Ingredient">
+            </form>
+        {% endif %}
+
+        <script src="{% static 'formset/jquery_formset.js' %}"></script>
+        <script type="text/javascript">
+            $(function () {
+                $('.property_formset_row').formset({
+                    prefix: 'property',
+                    addText: 'Add',
+                    deleteText: 'Delete',
+                    formCssClass: 'dynamic-formset1',
+                    addCssClass: 'add-row btn btn-info',
+                    deleteCssClass: 'delete-row btn btn-danger',
+                    added: function (row) {
+                        row.find('input[name*="name"]').removeAttr('disabled')
+                    }
+                });
+            });
+
+
+            $('#div_id_name_category').hide();
+            $('#div_id_name_new_category').hide();
+            $(document).ready(function () {
+                $('#saveIngredientButton').click(function (event) {
+                    var allFilled = true;
+
+                    $('.property_formset_row').each(function () {
+                        $(this).find('input, select, textarea').each(function () {
+                            if ($(this).val() == '') {
+                                allFilled = false;
+                                return false;
+                            }
+                        });
+
+                        if (!allFilled) {
+                            return false;
+                        }
+                    });
+
+                    if (!allFilled) {
+                        alert('Please fill in all fields before saving ingredient.');
+                        event.preventDefault();
+                    }
+                });
+
+                let name_category = $('#id_category_choices_0');
+                let name_new_category = $('#id_category_choices_1');
+                let toggle_category = function () {
+                    $('#div_id_name_category').toggle();
+                };
+                let toggle_new_category = function () {
+                    $('#div_id_name_new_category').toggle();
+                };
+                name_category.click(function () {
+                    if (name_new_category.is(":checked")) {
+                        toggle_new_category();
+                        name_new_category.prop('checked', false);
+                    }
+                    toggle_category();
+                });
+                name_new_category.click(function () {
+                    if (name_category.is(":checked")) {
+                        toggle_category();
+                        name_category.prop('checked', false);
+                    }
+                    toggle_new_category();
+                });
+                $('.popover-dismiss').popover({
+                    trigger: 'focus'
+                });
+            });
+
+            $('#saveIngredientButton').on('click', function (event) {
+                event.preventDefault();
+
+
+                let form_data = {
+                    name_ingredient: $('#id_name_ingredient').val(),
+                    name_category: $('#div_id_name_category').is(':visible') ? $('#id_name_category').val() : '',
+                    name_new_category: $('#div_id_name_new_category').is(':visible') ? $('#id_name_new_category').val() : '',
+                    quantity: $('#id_quantity').val(),
+                    measurement_unit: $('#id_measurement_unit').val(),
+                    expiry_date: $('#id_expiry_date').val(),
+                }
+
+                $('.property_formset_row').each(function (index) {
+                    let name = $(this).find('input[name$="-name"]').val();
+                    let value = $(this).find('input[name$="-value"]').val();
+
+                    if (name && value) {
+                        form_data.append(`property[${index}][name]`, name);
+                        form_data.append(`property[${index}][value]`, value);
+                    }
+                });
+
+                $.ajax({
+                    url: '{% url 'add-ingredient-inventory'  %}',
+                    type: 'POST',
+                    data: form_data,
+                    processData: false,
+                    contentType: false,
+                    success: function (response) {
+                        document.getElementById("inventory-ingredient-form").reset();
+                        window.location.reload();
+                        console.log('Success:', response);
+                    },
+                    error: function (error) {
+                        console.error('Error:', error);
+                    }
+                });
+            });
+        </script>
+    {% endspaceless %}
+{% endblock %}

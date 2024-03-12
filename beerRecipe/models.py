@@ -2,6 +2,11 @@ from django.contrib.auth.models import User
 from django.db import models
 from django_yaml_field import YAMLField
 
+CATEGORY_CHOICES = (
+    ("EXISTS", "Name Category"),
+    ("NEW", "New Category Name")
+)
+
 
 # Create your models here.
 class Category(models.Model):
@@ -17,7 +22,7 @@ class Category(models.Model):
 class Ingredient(models.Model):
     name = models.CharField(max_length=100)
     id_category = models.ForeignKey(Category, on_delete=models.CASCADE)
-    property = YAMLField()
+    property = YAMLField(blank=True)
 
     def __str__(self):
         return self.name
