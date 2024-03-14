@@ -5,38 +5,49 @@
 {% block content %}
     {% spaceless %}
         {% if user.is_authenticated %}
-            <form method="post" id="inventory-ingredient-form">
-                {% csrf_token %}
-                {% crispy inventory_ingredient_form %}
-                <hr>
-                <h3>Property</h3>
-                {% csrf_token %}
-                <table class="table table-striped">
-                    {{ property_formset.management_form }}
-                    {% for form in property_formset.forms %}
-                        {% if forloop.first %}
-                            <thead>
-                            <tr>
-                                {% for field in form.visible_fields %}
-                                    <th>{{ field.label|capfirst }}</th>
-                                {% endfor %}
-                            </tr>
-                            </thead>
-                        {% endif %}
-                        <tr class="{% cycle 'row1' 'row2' %} property_formset_row">
-                            {% if forloop.first or forloop.second or forloop.third %}
-                                <td>{{ form.name.as_hidden }}{{ form.name.value }}</td>
-                            {% else %}
-                                <td>{{ form.name }}</td>
+            <div id="message-container" class="d-none">
+                <div class="alert alert-dismissible" role="alert">
+                    <span id="message-content"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+
+            <div class="container-fluid">
+                <form method="post" id="inventory-ingredient-form"
+                      action="{% url 'add-ingredient-inventory' inventories.id %}">
+                    {% csrf_token %}
+                    {% crispy inventory_ingredient_form %}
+                    <hr>
+                    <h3>Property</h3>
+                    <table class="table table-striped">
+                        {{ property_formset.management_form }}
+                        {% for form in property_formset.forms %}
+                            {% if forloop.first %}
+                                <thead>
+                                <tr>
+                                    {% for field in form.visible_fields %}
+                                        <th>{{ field.label|capfirst }}</th>
+                                    {% endfor %}
+                                </tr>
+                                </thead>
                             {% endif %}
-                            <td>{{ form.value }}</td>
-                            <td>{{ form.delete }}</td>
-                        </tr>
-                    {% endfor %}
-                </table>
-                <hr>
-                <input id="saveIngredientButton" class="btn btn-success" type="submit" value="Save Ingredient">
-            </form>
+                            <tr class="{% cycle 'row1' 'row2' %} property_formset_row">
+                                {% if forloop.first or forloop.second or forloop.third %}
+                                    <td>{{ form.name.as_hidden }}{{ form.name.value }}</td>
+                                {% else %}
+                                    <td>{{ form.name }}</td>
+                                {% endif %}
+                                <td>{{ form.value }}</td>
+                                <td>{{ form.delete }}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                    <div role="group">
+                        <button class="btn btn-success" type="submit" id="saveIngredientButton">Save Ingredient</button>
+                        <a class="btn btn-link" type="button" href="{% url 'list_ingredient' inventories.id %}">Back</a>
+                    </div>
+                </form>
+            </div>
         {% endif %}
 
         <script src="{% static 'formset/jquery_formset.js' %}"></script>
@@ -47,14 +58,13 @@
                     addText: 'Add',
                     deleteText: 'Delete',
                     formCssClass: 'dynamic-formset1',
-                    addCssClass: 'add-row btn btn-info',
+                    addCssClass: 'add-row btn btn-primary',
                     deleteCssClass: 'delete-row btn btn-danger',
                     added: function (row) {
                         row.find('input[name*="name"]').removeAttr('disabled')
                     }
                 });
             });
-
 
             $('#div_id_name_category').hide();
             $('#div_id_name_new_category').hide();
@@ -77,6 +87,53 @@
 
                     if (!allFilled) {
                         alert('Please fill in all fields before saving ingredient.');
+                        event.preventDefault();
+                    } else {
+                        const form_data = new FormData();
+
+                        form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
+                        form_data.append('name_ingredient', document.getElementById('id_name_ingredient').value);
+                        form_data.append('name_category', document.getElementById('id_name_category').value);
+                        form_data.append('name_new_category', document.getElementById('id_name_new_category').value);
+                        form_data.append('quantity', document.getElementById('id_quantity').value);
+                        form_data.append('measurement_unit', document.getElementById('id_measurement_unit').value);
+                        form_data.append('expiry_date', document.getElementById('id_expiry_date').value);
+
+                        if (document.getElementById('id_name_category').value && document.getElementById('id_name_new_category').value) {
+                            alert("Both 'Name Category' and 'New Category Name' cannot be filled at the same time.");
+                            return;
+                        }
+                        document.querySelectorAll('.property_formset_row').forEach((element, index) => {
+                            let propertyName = element.querySelector('input[name$="-name"]').value;
+                            let propertyValue = element.querySelector('input[name$="-value"]').value;
+
+                            if (propertyName && propertyValue) {
+                                form_data.append(`property-${index}-name`, propertyName);
+                                form_data.append(`property-${index}-value`, propertyValue);
+                            }
+                        });
+
+                        $.ajax({
+                            type: 'POST',
+                            url: event.target.action,
+                            data: form_data,
+                            success: function (response) {
+                                document.getElementById('inventory-ingredient-form').reset();
+                                $('#message-content').text('Ingredient added successfully');
+                                $('#message-container').removeClass('d-none alert-danger').addClass('alert-success show');
+                                window.location.reload();
+                                console.log(response)
+                            },
+                            error: function (error) {
+                                $('#message-content').text('An error occurred. Please try again.');
+                                $('#message-container').removeClass('d-none alert-success').addClass('alert-danger show');
+
+                                console.log(error);
+                            },
+                            contentType: false,
+                            processData: false,
+                        });
+
                         event.preventDefault();
                     }
                 });
@@ -108,45 +165,6 @@
                 });
             });
 
-            $('#saveIngredientButton').on('click', function (event) {
-                event.preventDefault();
-
-
-                let form_data = {
-                    name_ingredient: $('#id_name_ingredient').val(),
-                    name_category: $('#div_id_name_category').is(':visible') ? $('#id_name_category').val() : '',
-                    name_new_category: $('#div_id_name_new_category').is(':visible') ? $('#id_name_new_category').val() : '',
-                    quantity: $('#id_quantity').val(),
-                    measurement_unit: $('#id_measurement_unit').val(),
-                    expiry_date: $('#id_expiry_date').val(),
-                }
-
-                $('.property_formset_row').each(function (index) {
-                    let name = $(this).find('input[name$="-name"]').val();
-                    let value = $(this).find('input[name$="-value"]').val();
-
-                    if (name && value) {
-                        form_data.append(`property[${index}][name]`, name);
-                        form_data.append(`property[${index}][value]`, value);
-                    }
-                });
-
-                $.ajax({
-                    url: '{% url 'add-ingredient-inventory'  %}',
-                    type: 'POST',
-                    data: form_data,
-                    processData: false,
-                    contentType: false,
-                    success: function (response) {
-                        document.getElementById("inventory-ingredient-form").reset();
-                        window.location.reload();
-                        console.log('Success:', response);
-                    },
-                    error: function (error) {
-                        console.error('Error:', error);
-                    }
-                });
-            });
         </script>
     {% endspaceless %}
 {% endblock %}

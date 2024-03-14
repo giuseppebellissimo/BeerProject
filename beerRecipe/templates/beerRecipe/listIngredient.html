@@ -4,25 +4,51 @@
     {% spaceless %}
         {% if user.is_authenticated %}
             <h3>Inventory</h3>
-
-            <table class="table table-striped">
-                <thead>
-                <tr>
-                    <th scope="col">Name</th>
-                    <th scope="col">Category</th>
-                    <th scope="col">Quantity</th>
-                    <th scope="col">Measurement Unit</th>
-                    <th scope="col">Expiry date</th>
-                    <th scope="col">Property</th>
-                    <th scope="col">Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                </tbody>
-            </table>
-
-            <a class="btn btn-primary" type="button" href="{% url 'add-ingredient-inventory' %}">Add
-                Ingredient</a>
+            <div class="container-fluid">
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col">Category</th>
+                        <th scope="col">Quantity</th>
+                        <th scope="col">Measurement Unit</th>
+                        <th scope="col">Expiry date</th>
+                        <th scope="col">Property</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for ingredient in ingredients %}
+                        <tr>
+                            <td>{{ ingredient.id_ingredient.name }}</td>
+                            <td>{{ ingredient.id_ingredient.id_category.name }}</td>
+                            <td>{{ ingredient.quantity }}</td>
+                            <td>{{ ingredient.measurement_unit }}</td>
+                            <td>{{ ingredient.expiry_date|date:"m/d/Y" }}</td>
+                            <td>
+                                {% for name,value in ingredient.id_ingredient.properties_dict.items %}
+                                    <strong>{{ name }}:</strong> {{ value }}<br>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                <a class="btn btn-primary rounded-pill" style="height: fit-content; margin-right: 5px">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <a class="btn btn-danger rounded-pill" style="height: fit-content; margin-left: 5px">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <hr>
+            <div role="group" style="margin: 5px">
+                <a class="btn btn-primary" type="button" href="{% url 'add-ingredient-inventory' inventories.id %}">Add
+                    Ingredient</a>
+                <a class="btn btn-link" type="button" href="{% url 'home' %}">Back Home</a>
+            </div>
         {% endif %}
     {% endspaceless %}
 {% endblock %}
