@@ -3,8 +3,9 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
-from django.http import JsonResponse, HttpResponseServerError, HttpResponseNotAllowed
+from django.http import JsonResponse, HttpResponseNotAllowed, HttpResponseNotFound
 from django.shortcuts import render, redirect
+from django.core.exceptions import ObjectDoesNotExist
 
 from .forms import *
 from .models import *
@@ -194,9 +195,6 @@ def add_ingredient_to_inventory(request, inventory_id):
                     status=400)
 
             properties = get_data_formset(request)
-
-            if properties is None:
-                return JsonResponse({'error': 'Invalid property data'}, status=400)
             properties_yaml = yaml.dump(properties)
 
             try:
@@ -217,7 +215,6 @@ def add_ingredient_to_inventory(request, inventory_id):
                     id_ingredient=ingredient
                 )
                 return JsonResponse({'success': 'Ingredient added successfully'})
-
             except Exception as e:
                 print(e)
                 return JsonResponse({'error': 'Internal server error'}, status=500)
@@ -246,7 +243,81 @@ def get_data_formset(request):
 
         i += 1
 
-    if properties:
-        return properties
+    return properties
+
+
+def remove_ingredient_from_inventory(request, ingredient_id, inventory_id):
+    try:
+        ingredient = Ingredient.objects.get(id=ingredient_id)
+        inventory_ingredient = InventoryIngredient.objects.get(id_ingredient=ingredient_id)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+    ingredient.delete()
+    inventory_ingredient.delete()
+
+    return redirect('list_ingredient', inventory_id=inventory_id)
+
+
+def edit_ingredient_from_inventory(request, ingredient_id, inventories):
+    try:
+        ingredient = InventoryIngredient.objects.get(id_ingredient=ingredient_id)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+
+    if request.method == 'GET':
+        initial_data = {
+            'name_ingredient': ingredient.id_ingredient.name,
+            'category_choices': 'EXISTS',
+            'name_category': ingredient.id_ingredient.id_category,
+            'quantity': ingredient.quantity,
+            'measurement_unit': ingredient.measurement_unit,
+            'expiry_date': ingredient.expiry_date,
+        }
+        inventory_ingredient_form = InventoryIngredientForm(initial=initial_data)
+
+        property_data = yaml.safe_load(ingredient.id_ingredient.property) if ingredient.id_ingredient.property else []
+        initial_property_data = [{'name': key, 'value': value} for key, value in property_data.items()]
+        print(initial_property_data)
+        property_formset = property_ingredient_formset(initial=initial_property_data, prefix='property')
+
+        context = {
+            'inventory_ingredient_form': inventory_ingredient_form,
+            'inventories': inventories,
+            'property_formset': property_formset,
+            'ingredient': ingredient,
+        }
+        return render(request, 'beerRecipe/editIngredientInventory.html', context)
+    elif request.method == 'POST':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            name_ingredient = request.POST.get('name_ingredient')
+            name_category = request.POST.get('name_category')
+            name_new_category = request.POST.get('name_new_category')
+            quantity = request.POST.get('quantity')
+            measurement_unit = request.POST.get('measurement_unit')
+            expiry_date = request.POST.get('expiry_date')
+
+            if name_category and name_new_category:
+                return JsonResponse(
+                    {'error': "Both 'Name Category' and 'New Category Name' cannot be filled at the same time."},
+                    status=400)
+
+            properties = get_data_formset(request)
+            properties_yaml = yaml.dump(properties)
+
+            try:
+                if name_new_category:
+                    category, created = Category.objects.get_or_create(name=name_new_category)
+                else:
+                    category = Category.objects.get(id=name_category)
+
+                ingredient = Ingredient.objects.update_or_create(name=name_ingredient, category=category,
+                                                                 property=properties_yaml)
+            except Exception as e:
+                print(e)
+                return JsonResponse({'error': 'Internal server error'}, status=500)
+
+            return JsonResponse({'success': 'Ingredient update successfully'})
+        else:
+            return JsonResponse({'error': 'Invalid AJAX request'}, status=400)
     else:
-        return HttpResponseServerError('Property does not exist')
+        return HttpResponseNotAllowed(['GET', 'POST'])

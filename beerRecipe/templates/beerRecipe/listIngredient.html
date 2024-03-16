@@ -31,10 +31,15 @@
                                 {% endfor %}
                             </td>
                             <td>
-                                <a class="btn btn-primary rounded-pill" style="height: fit-content; margin-right: 5px">
+                                <a class="btn btn-primary rounded-pill" style="height: fit-content; margin-right: 5px"
+                                   href="{% url 'edit-ingredient-inventory' ingredient.id inventories.id %}">
                                     <i class="bi bi-pencil-square"></i>
                                 </a>
-                                <a class="btn btn-danger rounded-pill" style="height: fit-content; margin-left: 5px">
+                                <a class="btn btn-danger rounded-pill" style="height: fit-content; margin-left: 5px"
+                                   href="#"
+                                   data-href="{% url 'remove-ingredient-inventory' ingredient.id inventories.id %}"
+                                   data-bs-target="#confirmDelete"
+                                   data-bs-toggle="modal">
                                     <i class="bi bi-trash"></i>
                                 </a>
                             </td>
@@ -49,6 +54,32 @@
                     Ingredient</a>
                 <a class="btn btn-link" type="button" href="{% url 'home' %}">Back Home</a>
             </div>
+
+            <!-- Modal for confirm delete-->
+            <div class="modal" tabindex="-1" id="confirmDelete" role="dialog">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Confirm Delete</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <span aria-hidden="true">&times;</span>
+                        </div>
+                        <div class="modal-body">
+                            <p>Are you sure you want to delete the ingredient?</p>
+                        </div>
+                        <div class="modal-footer">
+                            <a class="btn btn-danger btn-ok">Yes</a>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                $('#confirmDelete').on('show.bs.modal', function (e) {
+                    $(this).find('.btn-ok').attr('href', $(e.relatedTarget).data('href'));
+                });
+            </script>
         {% endif %}
     {% endspaceless %}
 {% endblock %}

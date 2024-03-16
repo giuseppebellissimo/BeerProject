@@ -14,7 +14,7 @@
 
             <div class="container-fluid">
                 <form method="post" id="inventory-ingredient-form"
-                      action="{% url 'add-ingredient-inventory' inventories.id %}">
+                      action="{% url 'edit-ingredient-inventory' ingredient.id inventories %}">
                     {% csrf_token %}
                     {% crispy inventory_ingredient_form %}
                     <hr>
@@ -32,19 +32,23 @@
                                 </thead>
                             {% endif %}
                             <tr class="{% cycle 'row1' 'row2' %} property_formset_row">
-                                {% if forloop.first or forloop.second or forloop.third %}
-                                    <td>{{ form.name}}</td>
-                                {% else %}
-                                    <td>{{ form.name }}</td>
-                                {% endif %}
-                                <td>{{ form.value }}</td>
-                                <td>{{ form.delete }}</td>
+                                {% for field in form.visible_fields %}
+                                    <td>
+                                        {% if forloop.first %}
+                                            {% for hidden in form.hidden_fields %}
+                                                {{ hidden }}
+                                            {% endfor %}
+                                        {% endif %}
+                                        {{ field.errors.as_ul }}
+                                        {{ field }}
+                                    </td>
+                                {% endfor %}
                             </tr>
                         {% endfor %}
                     </table>
                     <div role="group" style="margin-bottom: 10px">
-                        <button class="btn btn-success" type="submit" id="saveIngredientButton">Save Ingredient</button>
-                        <a class="btn btn-link" type="button" href="{% url 'list_ingredient' inventories.id %}">Back</a>
+                        <button class="btn btn-success" type="submit" id="saveChangesButton">Save Changes</button>
+                        <a class="btn btn-link" type="button" href="{% url 'list_ingredient' inventories %}">Back</a>
                     </div>
                 </form>
             </div>
@@ -66,10 +70,36 @@
                 });
             });
 
-            $('#div_id_name_category').hide();
             $('#div_id_name_new_category').hide();
             $(document).ready(function () {
-                $('#saveIngredientButton').click(function (event) {
+                let name_category = $('#id_category_choices_0');
+                let name_new_category = $('#id_category_choices_1');
+                let toggle_category = function () {
+                    $('#div_id_name_category').toggle();
+                };
+                let toggle_new_category = function () {
+                    $('#div_id_name_new_category').toggle();
+                };
+                name_category.click(function () {
+                    if (name_new_category.is(":checked")) {
+                        toggle_new_category();
+                        name_new_category.prop('checked', false);
+                    }
+                    toggle_category();
+                });
+                name_new_category.click(function () {
+                    if (name_category.is(":checked")) {
+                        toggle_category();
+                        name_category.prop('checked', false);
+                    }
+                    toggle_new_category();
+                });
+                $('.popover-dismiss').popover({
+                    trigger: 'focus'
+                });
+
+
+                $('#saveChangesButton').click(function (event) {
                     let allFilled = true;
 
                     $('.property_formset_row').each(function () {
@@ -138,32 +168,6 @@
 
                         event.preventDefault();
                     }
-                });
-
-                let name_category = $('#id_category_choices_0');
-                let name_new_category = $('#id_category_choices_1');
-                let toggle_category = function () {
-                    $('#div_id_name_category').toggle();
-                };
-                let toggle_new_category = function () {
-                    $('#div_id_name_new_category').toggle();
-                };
-                name_category.click(function () {
-                    if (name_new_category.is(":checked")) {
-                        toggle_new_category();
-                        name_new_category.prop('checked', false);
-                    }
-                    toggle_category();
-                });
-                name_new_category.click(function () {
-                    if (name_category.is(":checked")) {
-                        toggle_category();
-                        name_category.prop('checked', false);
-                    }
-                    toggle_new_category();
-                });
-                $('.popover-dismiss').popover({
-                    trigger: 'focus'
                 });
             });
 
