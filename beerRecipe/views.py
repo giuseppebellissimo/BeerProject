@@ -150,7 +150,6 @@ def list_ingredient(request, inventory_id):
         property_string = ingredient.id_ingredient.property
         if property_string:
             property_dict = yaml.safe_load(property_string)
-            print(f"Proprietà per {ingredient.id_ingredient.name}: {property_dict}")
             ingredient.id_ingredient.properties_dict = property_dict
 
     context = {
@@ -286,7 +285,7 @@ def edit_ingredient_from_inventory(request, ingredient_id, inventories):
             'property_formset': property_formset,
             'ingredient': ingredient,
         }
-        return render(request, 'beerRecipe/editIngredientInventory.html', context)
+        return render(request, 'beerRecipe/manageIngredientInventory.html', context)
     elif request.method == 'POST':
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             name_ingredient = request.POST.get('name_ingredient')
@@ -317,6 +316,104 @@ def edit_ingredient_from_inventory(request, ingredient_id, inventories):
                 return JsonResponse({'error': 'Internal server error'}, status=500)
 
             return JsonResponse({'success': 'Ingredient update successfully'})
+        else:
+            return JsonResponse({'error': 'Invalid AJAX request'}, status=400)
+    else:
+        return HttpResponseNotAllowed(['GET', 'POST'])
+
+
+def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
+    try:
+        inventory = Inventory.objects.get(id=inventory_id)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+
+    print('Ingredient id: ', ingredient_id)
+    if ingredient_id:
+        try:
+            ingredient = InventoryIngredient.objects.get(id_ingredient=ingredient_id)
+            initial_data = {
+                'name_ingredient': ingredient.id_ingredient.name,
+                'name_category': ingredient.id_ingredient.id_category,
+                'quantity': ingredient.quantity,
+                'measurement_unit': ingredient.measurement_unit,
+                'expiry_date': ingredient.expiry_date,
+            }
+            print('Initial form: ', initial_data)
+
+            property_data = yaml.safe_load(
+                ingredient.id_ingredient.property) if ingredient.id_ingredient.property else []
+            initial_property_data = [{'name': key, 'value': value} for key, value in property_data.items()]
+            print('Initial property: ', initial_property_data)
+
+            property_formset = property_ingredient_formset(initial=initial_property_data, prefix='property')
+        except ObjectDoesNotExist:
+            return HttpResponseNotFound("Ingredient not found")
+    else:
+        ingredient = None
+        initial_data = {}
+        print('Initial form: ', initial_data)
+
+        initial_property_data = [{'name': 'AA', 'value': ''},
+                                 {'name': 'EBC', 'value': ''},
+                                 {'name': 'Format', 'value': ''},
+                                 ]
+        print('Initial property: ', initial_property_data)
+        property_formset = property_ingredient_formset(initial=initial_property_data, prefix='property')
+        for i, form in enumerate(property_formset.forms):
+            if i < 3:
+                form.fields['name'].disabled = True
+
+    if request.method == 'GET':
+        inventory_ingredient_form = InventoryIngredientForm(initial=initial_data)
+        context = {
+            'inventory_ingredient_form': inventory_ingredient_form,
+            'property_formset': property_formset,
+            'inventory': inventory,
+            'ingredient': ingredient,
+        }
+        return render(request, 'beerRecipe/manageIngredientInventory.html', context)
+
+    elif request.method == 'POST':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            name_ingredient = request.POST.get('name_ingredient')
+            name_category = request.POST.get('name_category')
+            name_new_category = request.POST.get('name_new_category')
+            quantity = request.POST.get('quantity')
+            measurement_unit = request.POST.get('measurement_unit')
+            expiry_date = request.POST.get('expiry_date')
+
+            if name_category and name_new_category:
+                return JsonResponse(
+                    {'error': "Both 'Name Category' and 'New Category Name' cannot be filled at the same time."},
+                    status=400)
+
+            properties = get_data_formset(request)
+            properties_yaml = yaml.dump(properties)
+
+            try:
+                if name_new_category:
+                    category, created = Category.objects.get_or_create(name=name_new_category)
+                else:
+                    category = Category.objects.get(id=name_category)
+
+                ingredient, created = Ingredient.objects.update_or_create(id=ingredient_id,
+                                                                          defaults={
+                                                                              'name': name_ingredient,
+                                                                              'id_category': category,
+                                                                              'property': properties_yaml,
+                                                                          })
+                InventoryIngredient.objects.update_or_create(
+                    id_inventory=inventory,
+                    id_ingredient=ingredient,
+                    defaults={
+                        'quantity': quantity,
+                        'measurement_unit': measurement_unit,
+                        'expiry_date': expiry_date,
+                    })
+                return JsonResponse({'success': 'Ingredient added successfully'})
+            except Exception as e:
+                return JsonResponse({'error': e}, status=500)
         else:
             return JsonResponse({'error': 'Invalid AJAX request'}, status=400)
     else:

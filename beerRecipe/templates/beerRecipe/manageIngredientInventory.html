@@ -14,7 +14,11 @@
 
             <div class="container-fluid">
                 <form method="post" id="inventory-ingredient-form"
-                      action="{% url 'edit-ingredient-inventory' ingredient.id inventories %}">
+                      action="{% if ingredient %}
+                                {% url 'manage-ingredient-inventory' inventory.id ingredient.id %}
+                                {% else %}
+                                {% url 'manage-ingredient-inventory' inventory.id %}
+                      {% endif %}">
                     {% csrf_token %}
                     {% crispy inventory_ingredient_form %}
                     <hr>
@@ -47,8 +51,8 @@
                         {% endfor %}
                     </table>
                     <div role="group" style="margin-bottom: 10px">
-                        <button class="btn btn-success" type="submit" id="saveChangesButton">Save Changes</button>
-                        <a class="btn btn-link" type="button" href="{% url 'list_ingredient' inventories %}">Back</a>
+                        <button class="btn btn-success" type="submit" id="saveButton">Save</button>
+                        <a class="btn btn-link" type="button" href="{% url 'list_ingredient' inventory.id %}">Back</a>
                     </div>
                 </form>
             </div>
@@ -70,6 +74,7 @@
                 });
             });
 
+            $('#div_id_name_category').hide();
             $('#div_id_name_new_category').hide();
             $(document).ready(function () {
                 let name_category = $('#id_category_choices_0');
@@ -99,12 +104,12 @@
                 });
 
 
-                $('#saveChangesButton').click(function (event) {
+                $('#saveButton').click(function (event) {
                     let allFilled = true;
 
                     $('.property_formset_row').each(function () {
-                        $(this).find('input, select, textarea').each(function () {
-                            if ($(this).val() == '') {
+                        $(this).find('input:visible, select, textarea').each(function () {
+                            if ($(this).val() == '' && !$(this).hasClass('exclude-class')) {
                                 allFilled = false;
                                 return false;
                             }
@@ -151,7 +156,7 @@
                             data: form_data,
                             success: function (response) {
                                 document.getElementById('inventory-ingredient-form').reset();
-                                $('#message-content').text('Ingredient added successfully');
+                                $('#message-content').text('Ingredient added or update successfully');
                                 $('#message-container').removeClass('d-none alert-danger').addClass('alert-success show');
 
                                 console.log(response)

@@ -32,7 +32,7 @@
                             </td>
                             <td>
                                 <a class="btn btn-primary rounded-pill" style="height: fit-content; margin-right: 5px"
-                                   href="{% url 'edit-ingredient-inventory' ingredient.id inventories.id %}">
+                                   href="{% url 'manage-ingredient-inventory' inventories.id ingredient.id %}">
                                     <i class="bi bi-pencil-square"></i>
                                 </a>
                                 <a class="btn btn-danger rounded-pill" style="height: fit-content; margin-left: 5px"
@@ -50,7 +50,7 @@
             </div>
             <hr>
             <div role="group" style="margin: 5px">
-                <a class="btn btn-primary" type="button" href="{% url 'add-ingredient-inventory' inventories.id %}">Add
+                <a class="btn btn-primary" type="button" href="{% url 'manage-ingredient-inventory' inventories.id %}">Add
                     Ingredient</a>
                 <a class="btn btn-link" type="button" href="{% url 'home' %}">Back Home</a>
             </div>
