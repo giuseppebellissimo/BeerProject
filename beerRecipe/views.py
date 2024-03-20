@@ -97,34 +97,89 @@ def add_recipe(request):
 
 @login_required
 def add_ingredient_to_recipe(request, recipe_id):
-    ingredient_form = IngredientRecipeForm()
-    initial_property_data = [{'name': 'AA', 'value': ''},
-                             {'name': 'EBC', 'value': ''},
-                             {'name': 'Format', 'value': ''},
-                             ]
-    property_ingredient_recipe = property_ingredient_formset(initial=initial_property_data, prefix='property')
-    for i, form in enumerate(property_ingredient_recipe.forms):
-        if i < 3:
-            form.fields['name'].disabled = True
+    if request.method == 'GET':
+        ingredient_form = IngredientRecipeForm()
+        initial_property_data = [{'name': 'AA', 'value': ''},
+                                 {'name': 'EBC', 'value': ''},
+                                 {'name': 'Format', 'value': ''},
+                                 ]
+        property_ingredient_recipe = property_ingredient_formset(initial=initial_property_data, prefix='property')
+        for i, form in enumerate(property_ingredient_recipe.forms):
+            if i < 3:
+                form.fields['name'].disabled = True
 
-    context = {
-        'property_ingredient_recipe': property_ingredient_recipe,
-        'ingredient_form': ingredient_form,
-        'recipe_id': recipe_id
-    }
-    return render(request, 'beerRecipe/addIngredientRecipe.html', context)
+        context = {
+            'property_ingredient_recipe': property_ingredient_recipe,
+            'ingredient_form': ingredient_form,
+            'recipe_id': recipe_id
+        }
+        return render(request, 'beerRecipe/addIngredientRecipe.html', context)
+    elif request.method == 'POST':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            name_ingredient = request.POST.get('name_ingredient')
+            name_category = request.POST.get('name_category')
+            name_new_category = request.POST.get('name_new_category')
+            quantity = request.POST.get('quantity')
+            measurement_unit = request.POST.get('measurement_unit')
+            properties = get_data_formset(request)
+            properties_yaml = yaml.dump(properties)
+
+            if name_category and name_new_category:
+                return JsonResponse(
+                    {'error': "Both 'Name Category' and 'New Category Name' cannot be filled at the same time."},
+                    status=400)
+            if name_new_category:
+                category, created = Category.objects.get_or_create(name=name_new_category)
+            else:
+                category = Category.objects.get(id=name_category)
+
+            ingredient = Ingredient.objects.create(
+                name=name_ingredient,
+                id_category=category,
+                property=properties_yaml,
+            )
+            recipe = Recipe.objects.get(id=recipe_id)
+            IngredientRecipe.objects.create(
+                id_recipe=recipe,
+                id_ingredient=ingredient,
+                quantity=quantity,
+                measurement_unit=measurement_unit,
+            )
+            return JsonResponse({'success': 'Ingredient added successfully'})
+        else:
+            return JsonResponse({'error': 'Invalid AJAX request'}, status=400)
+    else:
+        return HttpResponseNotAllowed(['GET', 'POST'])
 
 
 @login_required
 def add_step_to_recipe(request, recipe_id):
-    step_form = step_formset(prefix='step')
-
-    context = {
-        'step_form': step_form,
-        'recipe_id': recipe_id
-    }
-
-    return render(request, 'beerRecipe/addStepRecipe.html', context)
+    if request.method == 'GET':
+        step_form = step_formset(prefix='step')
+        context = {
+            'step_form': step_form,
+            'recipe_id': recipe_id
+        }
+        return render(request, 'beerRecipe/addStepRecipe.html', context)
+    elif request.method == 'POST':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            total_forms = int(request.POST.get('step-TOTAL_FORMS'))
+            recipe = Recipe.objects.get(id=recipe_id)
+            for i in range(total_forms):
+                index = request.POST.get(f'step-{i}-index')
+                name = request.POST.get(f'step-{i}-name')
+                description = request.POST.get(f'step-{i}-description')
+                Step.objects.create(
+                    index=index,
+                    name=name,
+                    description=description,
+                    id_recipe=recipe,
+                )
+            return JsonResponse({'success': 'Step added successfully'})
+        else:
+            return JsonResponse({'error': 'Invalid AJAX request'}, status=400)
+    else:
+        return HttpResponseNotAllowed(['GET', 'POST'])
 
 
 @login_required

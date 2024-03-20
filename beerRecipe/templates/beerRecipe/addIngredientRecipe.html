@@ -37,7 +37,8 @@
                     {% endfor %}
                 </table>
                 <button class="btn btn-outline-success" type="submit" id="saveIngredientButton"
-                        style="margin-bottom: 15px">Save Ingredient
+                        style="margin-bottom: 15px" data-url="{% url 'add-ingredient-recipe' recipe_id %}">Save
+                    Ingredient
                 </button>
             </form>
         {% endif %}
@@ -83,6 +84,49 @@
                 });
                 $('.popover-dismiss').popover({
                     trigger: 'focus'
+                });
+
+                $('#saveIngredientButton').on('click', function () {
+                    const form_data = new FormData();
+                    form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
+                    form_data.append('name_ingredient', document.getElementById('id_name_ingredient').value);
+                    form_data.append('name_category', document.getElementById('id_name_category').value);
+                    form_data.append('name_new_category', document.getElementById('id_name_new_category').value);
+                    form_data.append('quantity', document.getElementById('id_quantity').value);
+                    form_data.append('measurement_unit', document.getElementById('id_measurement_unit').value);
+
+                    if (document.getElementById('id_name_category').value && document.getElementById('id_name_new_category').value) {
+                        alert("Both 'Name Category' and 'New Category Name' cannot be filled at the same time.");
+                    }
+                    document.querySelectorAll('.formset_row').forEach((element, index) => {
+                        let propertyName = element.querySelector('input[name$="-name"]').value;
+                        let propertyValue = element.querySelector('input[name$="-value"]').value;
+
+                        if (propertyName && propertyValue) {
+                            form_data.append(`property-${index}-name`, propertyName);
+                            form_data.append(`property-${index}-value`, propertyValue);
+                        }
+                    });
+                    let url = $(this).data('url');
+                    $.ajax({
+                        type: 'POST',
+                        url: url,
+                        data: form_data,
+                        success: function (response) {
+                            document.getElementById('ingredient-form').reset();
+                            $('#message-content').text('Ingredient added successfully');
+                            $('#message-container').removeClass('d-none alert-danger').addClass('alert-success show');
+                            console.log(response)
+                        },
+                        error: function (error) {
+                            $('#message-content').text('An error occurred. Please try again.');
+                            $('#message-container').removeClass('d-none alert-success').addClass('alert-danger show');
+                            console.log(error);
+                        },
+                        contentType: false,
+                        processData: false,
+                    });
+                    event.preventDefault();
                 });
             })
         </script>

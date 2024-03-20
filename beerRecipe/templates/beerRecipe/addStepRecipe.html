@@ -35,30 +35,61 @@
                     {% endfor %}
                 </table>
                 <button class="btn btn-outline-success" type="submit" id="saveStepButton"
-                        style="margin-bottom: 15px">Save Step
+                        style="margin-bottom: 15px" data-url="{% url 'add-step-recipe' recipe_id %}">Save Step
                 </button>
             </form>
         {% endif %}
 
         <script src="{% static 'formset/jquery_formset.js' %}"></script>
         <script type="text/javascript">
-            $('.step_formset_row').formset({
-                prefix: 'property',
-                addText: 'Add',
-                deleteText: 'Delete',
-                formCssClass: 'dynamic-formset1',
-                addCssClass: 'add-row btn btn-primary',
-                deleteCssClass: 'delete-row btn btn-danger',
+            $(function () {
+                $('.step_formset_row').formset({
+                    prefix: 'step',
+                    addText: 'Add',
+                    deleteText: 'Delete',
+                    formCssClass: 'dynamic-formset1',
+                    addCssClass: 'add-row btn btn-primary',
+                    deleteCssClass: 'delete-row btn btn-danger',
+                });
             });
 
-            $('#saveStepButton').on('click',function () {
+            $('#saveStepButton').on('click', function () {
                 const form_data = new FormData();
+                form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
 
-                form_data.append('name',document.getElementById('id_name').value);
-                form_data.append('litre',document.getElementById('id_litre').value);
-                form_data.append('ebc',document.getElementById('id_ebc').value);
-                form_data.append('ibu',document.getElementById('id_ibu').value);
+                $('#step-form .step_formset_row').each(function (index) {
+                    $(this).find(':input').each(function () {
+                        let fieldName = $(this).attr('name').replace(/-\d+-/, `-${index}-`);
+                        form_data.append(fieldName, $(this).val());
+                    });
+                });
+
+                $('#step-form').find(':input[name$="-TOTAL_FORMS"], :input[name$="-INITIAL_FORMS"], :input[name$="-MIN_NUM_FORMS"], :input[name$="-MAX_NUM_FORMS"]').each(function () {
+                    form_data.append($(this).attr('name'), $(this).val());
+                });
+
+                let url = $(this).data('url');
+                $.ajax({
+                    type: 'POST',
+                    url: url,
+                    data: form_data,
+                    success: function (response) {
+                        $('#message-content').text('Step added successfully');
+                        $('#message-container').removeClass('d-none alert-danger').addClass('alert-success show');
+                        document.getElementById('step-form').reset();
+                        console.log(response);
+                    },
+                    error: function (error) {
+                        $('#message-content').text('An error occurred. Please try again.');
+                        $('#message-container').removeClass('d-none alert-success').addClass('alert-danger show');
+                        console.log(error);
+                    },
+                    contentType: false,
+                    processData: false,
+                });
+                event.preventDefault();
             })
         </script>
     {% endspaceless %}
 {% endblock %}
+

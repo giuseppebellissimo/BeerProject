@@ -156,4 +156,4 @@ class StepForm(forms.ModelForm):
 
 
 property_ingredient_formset = formset_factory(PropertyIngredientForm, extra=0, min_num=3, can_delete=True)
-step_formset = formset_factory(StepForm, extra=1, can_delete=True)
+step_formset = formset_factory(StepForm, extra=0, min_num=1, can_delete=True)
