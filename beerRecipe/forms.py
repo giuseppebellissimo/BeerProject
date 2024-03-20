@@ -25,16 +25,63 @@ class NewUserForm(UserCreationForm):
         return user
 
 
-class AddRecipeForm(forms.ModelForm):
+class RecipeForm(forms.ModelForm):
     class Meta:
         model = Recipe
         fields = ['name', 'litre', 'ebc', 'ibu']
 
+        labels = {
+            'name': 'Name Recipe',
+            'litre': 'Litre',
+            'ebc': 'EBC',
+            'ibu': 'IBU',
+        }
 
-class AddStepForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(RecipeForm, self).__init__(*args, **kwargs)
+
+        self.helper = FormHelper()
+        self.helper.form_method = 'POST'
+
+        self.helper.layout = Layout(
+            Row(Div('name', css_class="col-6")),
+            Row(Div('litre', css_class="col-3"), Div('ebc', css_class="col-3"),
+                Div('ibu', css_class="col-3"), )
+        )
+
+
+class IngredientRecipeForm(forms.ModelForm):
+    name_ingredient = forms.CharField(max_length=100)
+    category_choices = forms.MultipleChoiceField(choices=CATEGORY_CHOICES, required=False,
+                                                 widget=forms.CheckboxSelectMultiple)
+    name_category = forms.ModelChoiceField(queryset=Category.objects.all(), empty_label='---')
+    name_new_category = forms.CharField(max_length=100)
+
     class Meta:
-        model = Step
-        fields = ['index', 'name', 'description']
+        model = IngredientRecipe
+        fields = '__all__'
+        exclude = ('id_ingredient', 'id_recipe')
+
+        labels = {
+            'name_ingredient': 'Name Ingredient',
+            'quantity': 'Quantity',
+            'measurement_unit': 'Measurement Unit',
+            'category_choices': 'Category Options',
+            'name_category': 'Category',
+            'name_new_category': 'New Category Name',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super(IngredientRecipeForm, self).__init__(*args, **kwargs)
+
+        self.helper = FormHelper()
+        self.helper.form_method = 'POST'
+
+        self.helper.layout = Layout(
+            Row(Div('name_ingredient', css_class="col-6"), Div(InlineCheckboxes('category_choices'), css_class="col-6"),
+                Div('name_category', css_class="col-6"), Div('name_new_category', css_class="col-6")),
+            Row(Div('quantity', css_class="col-3"), Div('measurement_unit', css_class="col-3"), )
+        )
 
 
 class AddInventoryForm(forms.ModelForm):
@@ -90,4 +137,23 @@ class PropertyIngredientForm(forms.Form):
                                widget=forms.NumberInput(attrs={'class': 'form-control form-control-sm'}))
 
 
+class StepForm(forms.ModelForm):
+    class Meta:
+        model = Step
+        fields = ('index', 'name', 'description')
+
+        widgets = {
+            'index': forms.NumberInput(attrs={'class': 'form-control form-control-s,'}),
+            'name': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
+            'description': forms.Textarea(attrs={'class': 'form-control form-control-sm'}),
+        }
+
+        labels = {
+            'index': 'Index',
+            'name': 'Name',
+            'description': 'Description'
+        }
+
+
 property_ingredient_formset = formset_factory(PropertyIngredientForm, extra=0, min_num=3, can_delete=True)
+step_formset = formset_factory(StepForm, extra=1, can_delete=True)

@@ -39,7 +39,7 @@
 
                             <div class="btn-group" role="group" aria-label="Basic outlined example">
                                 <a class="btn btn-outline-primary" , style="height: fit-content"
-                                   href="{% url 'edit_recipe' recipe.id %}">
+                                   href="#">
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 <a class="btn btn-outline-secondary" , style="height: fit-content"
@@ -69,7 +69,7 @@
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                                                     Close
                                                 </button>
-                                                <a class="btn btn-danger" href="{% url 'delete_recipe' recipe.id %}">Confirm</a>
+                                                <a class="btn btn-danger" href="#">Confirm</a>
                                             </div>
                                         </div>
                                     </div>
@@ -87,10 +87,7 @@
                                                         aria-label="Close"></button>
                                             </div>
                                             <div class="modal-body">
-                                                {% for step in steps %}
-                                                    <p>{{ step.index }}. {{ step.name }}</p>
-                                                    <p>{{ step.description }}</p>
-                                                {% endfor %}
+
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
@@ -116,7 +113,7 @@
                     <li class="list-group-item">No recipes found. Add a new recipe...</li>
                 {% endfor %}
             </div>
-            <a class="btn btn-primary" style="margin-top: 15px" href="{% url 'recipes' %}">
+            <a class="btn btn-primary" style="margin-top: 15px" href="{% url 'add-recipe' %}">
                 Add Recipe
             </a>
         </div>

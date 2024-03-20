@@ -3,9 +3,17 @@
 {% block content %}
     {% spaceless %}
         {% if user.is_authenticated %}
-            <h3>Inventory</h3>
+            <h3>Inventory {{ inventories.name }}</h3>
+            <hr>
             <div class="container-fluid">
-                <table class="table table-striped">
+                <label for="categoryFilter">Select Category</label>
+                <select id="categoryFilter" style="margin-left: 10px">
+                    <option value="">--</option>
+                    {% for category in categories %}
+                        <option value="{{ category.name }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+                <table class="table table-striped" id="ingredientTable">
                     <thead>
                     <tr>
                         <th scope="col">Name</th>
@@ -37,7 +45,7 @@
                                 </a>
                                 <a class="btn btn-danger rounded-pill" style="height: fit-content; margin-left: 5px"
                                    href="#"
-                                   data-href="{% url 'remove-ingredient-inventory' ingredient.id inventories.id %}"
+                                   data-href="{% url 'remove-ingredient-inventory' ingredient.id %}"
                                    data-bs-target="#confirmDelete"
                                    data-bs-toggle="modal">
                                     <i class="bi bi-trash"></i>
@@ -78,6 +86,18 @@
             <script>
                 $('#confirmDelete').on('show.bs.modal', function (e) {
                     $(this).find('.btn-ok').attr('href', $(e.relatedTarget).data('href'));
+                });
+
+                $(document).ready(function () {
+                    let table = $('#ingredientTable').DataTable({
+                        'paging': true,
+                        'ordering': true,
+                        'searching': true,
+                    });
+
+                    $('#categoryFilter').on('change', function () {
+                        table.column(1).search(this.value).draw();
+                    });
                 });
             </script>
         {% endif %}

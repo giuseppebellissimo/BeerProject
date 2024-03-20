@@ -1,0 +1,90 @@
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block content %}
+    {% spaceless %}
+        {% if user.is_authenticated %}
+            <form method="post" id="ingredient-form" action="{% url 'add-ingredient-recipe' recipe_id %}">
+                <h3>Recipe Ingredients</h3>
+                {% csrf_token %}
+                {% crispy ingredient_form %}
+                <h5>Property</h5>
+                <table class="table table-striped">
+                    {{ property_ingredient_recipe.management_form }}
+                    {% for form in property_ingredient_recipe.forms %}
+                        {% if forloop.first %}
+                            <thead>
+                            <tr>
+                                {% for field in form.visible_fields %}
+                                    <th>{{ field.label|capfirst }}</th>
+                                {% endfor %}
+                            </tr>
+                            </thead>
+                        {% endif %}
+                        <tr class="{% cycle 'row1' 'row2' %} formset_row">
+                            {% for field in form.visible_fields %}
+                                <td>
+                                    {% if forloop.first %}
+                                        {% for hidden in form.hidden_fields %}
+                                            {{ hidden }}
+                                        {% endfor %}
+                                    {% endif %}
+                                    {{ field.errors.as_ul }}
+                                    {{ field }}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </table>
+                <button class="btn btn-outline-success" type="submit" id="saveIngredientButton"
+                        style="margin-bottom: 15px">Save Ingredient
+                </button>
+            </form>
+        {% endif %}
+
+        <script src="{% static 'formset/jquery_formset.js' %}"></script>
+        <script type="text/javascript">
+            $('.formset_row').formset({
+                prefix: 'property',
+                addText: 'Add',
+                deleteText: 'Delete',
+                formCssClass: 'dynamic-formset1',
+                addCssClass: 'add-row btn btn-primary',
+                deleteCssClass: 'delete-row btn btn-danger',
+                added: function (row) {
+                    row.find('input[name*="name"]').removeAttr('disabled')
+                }
+            });
+
+            $('#div_id_name_category').hide();
+            $('#div_id_name_new_category').hide();
+            $(document).ready(function () {
+                let name_category = $('#id_category_choices_0');
+                let name_new_category = $('#id_category_choices_1');
+                let toggle_category = function () {
+                    $('#div_id_name_category').toggle();
+                };
+                let toggle_new_category = function () {
+                    $('#div_id_name_new_category').toggle();
+                };
+                name_category.click(function () {
+                    if (name_new_category.is(":checked")) {
+                        toggle_new_category();
+                        name_new_category.prop('checked', false);
+                    }
+                    toggle_category();
+                });
+                name_new_category.click(function () {
+                    if (name_category.is(":checked")) {
+                        toggle_category();
+                        name_category.prop('checked', false);
+                    }
+                    toggle_new_category();
+                });
+                $('.popover-dismiss').popover({
+                    trigger: 'focus'
+                });
+            })
+        </script>
+    {% endspaceless %}
+{% endblock %}

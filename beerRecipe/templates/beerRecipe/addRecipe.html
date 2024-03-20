@@ -1,15 +1,98 @@
 {% extends 'beerRecipe/baseHome.html' %}
-{% load crispy_forms_filters %}
+{% load static %}
+{% load crispy_forms_tags %}
 
 {% block content %}
-    <div class="container" style="margin: 10px; padding: 10px">
-        <form method="post" action="{% url 'recipes' %}">
-            {% csrf_token %}
-            {{ recipe_form|crispy }}
-            {{ formset.management_form }}
-            {{ formset|crispy }}
-            <button type="submit" class="btn btn-primary">Save</button>
-            <a class="btn btn-secondary" href="{% url 'home' %}">Cancel</a>
-        </form>
-    </div>
+    {% spaceless %}
+        {% if user.is_authenticated %}
+            <div id="message-container" class="d-none">
+                <div class="alert alert-dismissible" role="alert">
+                    <span id="message-content"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+            <h3>Recipe</h3>
+            <div class="container-fluid" id="recipe-container">
+                <form id="recipe-form" method="post" action="{% url 'add-recipe' %}">
+                    {% csrf_token %}
+                    {% crispy recipe_form %}
+                </form>
+                <button class="btn btn-outline-success" type="button" id="saveRecipeButton">Save Recipe</button>
+            </div>
+            <div class="container-fluid d-none" id="action-buttons">
+                <button type="button" id="addIngredientButton" class="btn btn-primary"
+                        data-url-template="{% url 'add-ingredient-recipe' 0 %}">
+                    Add Ingredient
+                </button>
+                <button type="button" id="addStepButton" class="btn btn-primary"
+                        data-url-template="{% url 'add-step-recipe' 0 %}">
+                    Add Step
+                </button>
+            </div>
+            <hr>
+            <div class="container-fluid" id="ingredient-container"></div>
+            <hr>
+            <div class="container-fluid" id="step-container"></div>
+        {% endif %}
+
+        <script src="{% static 'formset/jquery_formset.js' %}"></script>
+        <script type="text/javascript">
+            let globalRecipeId = null;
+            $(document).ready(function () {
+
+                $('#saveRecipeButton').on('click', function () {
+                    const form_data = new FormData();
+
+                    form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
+                    form_data.append('name', document.getElementById('id_name').value);
+                    form_data.append('litre', document.getElementById('id_litre').value);
+                    form_data.append('ebc', document.getElementById('id_ebc').value);
+                    form_data.append('ibu', document.getElementById('id_ibu').value);
+
+                    $.ajax({
+                        type: 'POST',
+                        url: event.target.action,
+                        data: form_data,
+                        success: function (response) {
+                            if (response.recipe_id) {
+                                $('#saveRecipeButton').hide();
+                                $('#action-buttons').removeClass('d-none');
+                                $('#recipe-form').find('input, textarea,select').prop('disabled', true);
+                                globalRecipeId = response.recipe_id;
+                            }
+                            $('#message-content').text('Recipe added successfully');
+                            $('#message-container').removeClass('d-none alert-danger').addClass('alert-success show');
+                            console.log(response)
+                        },
+                        error: function (error) {
+                            $('#message-content').text('An error occurred. Please try again.');
+                            $('#message-container').removeClass('d-none alert-success').addClass('alert-danger show');
+                            console.log(error);
+                        },
+                        contentType: false,
+                        processData: false,
+                    });
+                    event.preventDefault();
+                });
+
+                $('#addIngredientButton').on('click', function () {
+
+                    if (globalRecipeId) {
+                        let url = $(this).data('url-template').replace('0', globalRecipeId);
+                        $('#addIngredientButton').hide();
+                        $('#ingredient-container').load(url);
+                    }
+                });
+
+                $('#addStepButton').on('click', function () {
+
+                    if (globalRecipeId) {
+                        let url = $(this).data('url-template').replace('0', globalRecipeId);
+                        $('#addStepButton').hide();
+                        $('#step-container').load(url);
+                    }
+                });
+            });
+        </script>
+    {% endspaceless %}
 {% endblock %}
