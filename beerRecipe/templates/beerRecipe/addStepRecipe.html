@@ -34,9 +34,12 @@
                         </tr>
                     {% endfor %}
                 </table>
-                <button class="btn btn-outline-success" type="submit" id="saveStepButton"
-                        style="margin-bottom: 15px" data-url="{% url 'add-step-recipe' recipe_id %}">Save Step
-                </button>
+                <div role="group" style="margin-bottom: 10px">
+                    <button class="btn btn-outline-success" type="submit" id="saveStepButton"
+                            style="margin-bottom: 15px" data-url="{% url 'add-step-recipe' recipe_id %}">Save Step
+                    </button>
+                    <a class="btn btn-link" type="button" href="{% url 'home' %}">Back Home</a>
+                </div>
             </form>
         {% endif %}
 

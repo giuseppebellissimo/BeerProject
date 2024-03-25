@@ -64,10 +64,9 @@ def logout_user(request):
 
 @login_required
 def home(request):
-    recipes = Recipe.objects.all()
-    steps = Step.objects.all()
+    recipes = Recipe.objects.filter(id_user=request.user)
     inventories = Inventory.objects.filter(id_user=request.user)
-    return render(request, 'beerRecipe/home.html', {'recipes': recipes, 'steps': steps, 'inventories': inventories})
+    return render(request, 'beerRecipe/home.html', {'recipes': recipes, 'inventories': inventories})
 
 
 @login_required
@@ -183,6 +182,48 @@ def add_step_to_recipe(request, recipe_id):
 
 
 @login_required
+def view_recipes(request, recipe_id):
+    recipe = Recipe.objects.get(id=recipe_id)
+    ingredients = IngredientRecipe.objects.filter(id_recipe=recipe_id)
+    steps = Step.objects.filter(id_recipe=recipe_id)
+    for ingredient in ingredients:
+        property_string = ingredient.id_ingredient.property
+        if property_string:
+            property_dict = yaml.safe_load(property_string)
+            ingredient.id_ingredient.properties_dict = property_dict
+    context = {
+        'recipe': recipe,
+        'ingredients': ingredients,
+        'steps': steps,
+    }
+    return render(request, 'beerRecipe/viewRecipe.html', context)
+
+
+@login_required
+def remove_ingredient_form_recipe(request, ingredient_id):
+    try:
+        ingredient = Ingredient.objects.get(id=ingredient_id)
+        ingredient_recipe = IngredientRecipe.objects.get(id_ingredient=ingredient_id)
+        recipe = ingredient_recipe.id_recipe.id
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+    ingredient.delete()
+    ingredient_recipe.delete()
+    return redirect('view-recipe', recipe)
+
+
+@login_required
+def remove_step_from_recipe(request, step_id):
+    try:
+        step = Step.objects.get(id=step_id)
+        recipe = step.id_recipe.id
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+    step.delete()
+    return redirect('view-recipe', recipe)
+
+
+@login_required
 def add_inventory(request):
     if request.method == 'POST':
         inventory_form = AddInventoryForm(request.POST)
@@ -246,10 +287,12 @@ def remove_ingredient_from_inventory(request, ingredient_id):
     try:
         ingredient = Ingredient.objects.get(id=ingredient_id)
         inventory_ingredient = InventoryIngredient.objects.get(id_ingredient=ingredient_id)
+        inventory = inventory_ingredient.id_inventory.id
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
     ingredient.delete()
     inventory_ingredient.delete()
+    return redirect('list_ingredient', inventory)
 
 
 @login_required
@@ -259,7 +302,6 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
-    print('Ingredient id: ', ingredient_id)
     if ingredient_id:
         try:
             ingredient = InventoryIngredient.objects.get(id_ingredient=ingredient_id)
@@ -270,12 +312,10 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
                 'measurement_unit': ingredient.measurement_unit,
                 'expiry_date': ingredient.expiry_date,
             }
-            print('Initial form: ', initial_data)
 
             property_data = yaml.safe_load(
                 ingredient.id_ingredient.property) if ingredient.id_ingredient.property else []
             initial_property_data = [{'name': key, 'value': value} for key, value in property_data.items()]
-            print('Initial property: ', initial_property_data)
 
             property_formset = property_ingredient_formset(initial=initial_property_data, prefix='property')
         except ObjectDoesNotExist:
@@ -283,13 +323,11 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
     else:
         ingredient = None
         initial_data = {}
-        print('Initial form: ', initial_data)
 
         initial_property_data = [{'name': 'AA', 'value': ''},
                                  {'name': 'EBC', 'value': ''},
                                  {'name': 'Format', 'value': ''},
                                  ]
-        print('Initial property: ', initial_property_data)
         property_formset = property_ingredient_formset(initial=initial_property_data, prefix='property')
         for i, form in enumerate(property_formset.forms):
             if i < 3:

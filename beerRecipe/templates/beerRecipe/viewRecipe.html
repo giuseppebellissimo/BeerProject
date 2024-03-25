@@ -1,0 +1,130 @@
+{% extends 'beerRecipe/baseHome.html' %}
+
+{% block content %}
+    {% spaceless %}
+        {% if user.is_authenticated %}
+            <div class="d-flex align-items-center"
+                 style="margin-top: 20px">
+                <h3>Recipe {{ recipe.name }}</h3>
+                <a class="btn btn-primary rounded-pill"
+                   style="height: fit-content; margin-left: 20px;margin-bottom: 5px"
+                   href="#">
+                    <i class="bi bi-pencil-square"></i>
+                </a>
+            </div>
+            <ul class="list-group" style="margin-top: 20px">
+                <li class="list-group-item">
+                    <strong>Litre</strong>: {{ recipe.litre }}</li>
+                <li class="list-group-item">
+                    <strong>EBC</strong>: {{ recipe.ebc }}</li>
+                <li class="list-group-item">
+                    <strong>IBU</strong>: {{ recipe.ibu }}</li>
+            </ul>
+            <div class="d-flex align-items-center"
+                 style="margin-top: 20px">
+                <h3>Ingredients</h3>
+                <a class="btn btn-outline-success rounded-pill"
+                   style="height: fit-content; margin-left: 20px;margin-bottom: 5px"
+                   href="#">
+                    <i class="bi bi-plus"></i>
+                </a>
+            </div>
+            <table class="table table-striped" style="margin-top: 20px">
+                <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Quantity</th>
+                    <th scope="col">Measurement Unit</th>
+                    <th scope="col">Property</th>
+                    <th scope="col">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for ingredient in ingredients %}
+                    <tr>
+                        <td>{{ ingredient.id_ingredient.name }}</td>
+                        <td>{{ ingredient.id_ingredient.id_category.name }}</td>
+                        <td>{{ ingredient.quantity }}</td>
+                        <td>{{ ingredient.measurement_unit }}</td>
+                        <td>
+                            {% for name,value in ingredient.id_ingredient.properties_dict.items %}
+                                <strong>{{ name }}:</strong> {{ value }}<br>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <a class="btn btn-primary rounded-pill" style="height: fit-content; margin-right: 5px"
+                               href="#">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <a class="btn btn-danger rounded-pill" style="height: fit-content; margin-left: 5px"
+                               href="#"
+                               data-href="{% url 'remove-ingredient-recipe' ingredient.id_ingredient.id %}"
+                               data-bs-target="#confirmDelete"
+                               data-bs-toggle="modal">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <div class="d-flex align-items-center"
+                 style="margin-top: 20px">
+                <h3>Steps</h3>
+                <a class="btn btn-outline-success rounded-pill"
+                   style="height: fit-content; margin-left: 20px;margin-bottom: 5px"
+                   href="#">
+                    <i class="bi bi-plus"></i>
+                </a>
+            </div>
+            {% for step in steps %}
+                <div class="d-flex justify-content-between align-items-start" style="margin-bottom: 50px">
+                    <div>
+                        <strong>{{ step.index }}. {{ step.name }}</strong><br>
+                        <span style="display:block; margin-left: 40px;">{{ step.description }}</span>
+                    </div>
+                    <div>
+                        <a class="btn btn-primary rounded-pill" style="height: fit-content; margin-right: 5px"
+                           href="#">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a class="btn btn-danger rounded-pill" style="height: fit-content; margin-left: 5px"
+                           href="#"
+                           data-href="{% url 'remove-step-recipe' step.id %}"
+                           data-bs-target="#confirmDelete"
+                           data-bs-toggle="modal">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+
+            <!-- Modal for confirm delete-->
+            <div class="modal" tabindex="-1" id="confirmDelete" role="dialog">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Confirm Delete</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <span aria-hidden="true">&times;</span>
+                        </div>
+                        <div class="modal-body">
+                            <p>Are you sure you want to delete?</p>
+                        </div>
+                        <div class="modal-footer">
+                            <a class="btn btn-danger btn-ok">Yes</a>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                $('#confirmDelete').on('show.bs.modal', function (e) {
+                    $(this).find('.btn-ok').attr('href', $(e.relatedTarget).data('href'));
+                });
+            </script>
+        {% endif %}
+    {% endspaceless %}
+{% endblock %}
