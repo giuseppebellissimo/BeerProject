@@ -30,21 +30,22 @@
 
 <!-- Script DataTable -->
 <script src="https://cdn.datatables.net/2.0.2/js/dataTables.js"></script>
-<nav class="navbar bg-body-tertiary">
-    <div class="container-fluid">
-        <a class="navbar-brand">
-            {% load static %}
-            <img src="{% static 'beerRecipe/beer.png' %}" alt="logo" width="32" height="32"
-                 class="d-inline-block align-text-top">
-            Beer Recipe
-        </a>
-        <form method="post" action="{% url 'logout_user' %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-outline-secondary">Logout</button>
-        </form>
-    </div>
-</nav>
-
+{% if not hide_navbar %}
+    <nav class="navbar bg-body-tertiary">
+        <div class="container-fluid">
+            <a class="navbar-brand">
+                {% load static %}
+                <img src="{% static 'beerRecipe/beer.png' %}" alt="logo" width="32" height="32"
+                     class="d-inline-block align-text-top">
+                Beer Recipe
+            </a>
+            <form method="post" action="{% url 'logout_user' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-secondary">Logout</button>
+            </form>
+        </div>
+    </nav>
+{% endif %}
 {% block content %}
 {% endblock %}
 

@@ -6,9 +6,9 @@
             <div class="d-flex align-items-center"
                  style="margin-top: 20px">
                 <h3>Recipe {{ recipe.name }}</h3>
-                <a class="btn btn-primary rounded-pill"
+                <a class="btn btn-outline-primary rounded-pill"
                    style="height: fit-content; margin-left: 20px;margin-bottom: 5px"
-                   href="#">
+                   href="{% url 'add-recipe' recipe.id %}">
                     <i class="bi bi-pencil-square"></i>
                 </a>
             </div>
@@ -25,7 +25,7 @@
                 <h3>Ingredients</h3>
                 <a class="btn btn-outline-success rounded-pill"
                    style="height: fit-content; margin-left: 20px;margin-bottom: 5px"
-                   href="#">
+                   href="{% url 'add-ingredient-recipe' recipe.id %}?hide_back_button=False">
                     <i class="bi bi-plus"></i>
                 </a>
             </div>
@@ -54,7 +54,7 @@
                         </td>
                         <td>
                             <a class="btn btn-primary rounded-pill" style="height: fit-content; margin-right: 5px"
-                               href="#">
+                               href="{% url 'add-ingredient-recipe' recipe.id ingredient.id_ingredient.id %}?hide_back_button=False">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
                             <a class="btn btn-danger rounded-pill" style="height: fit-content; margin-left: 5px"
@@ -74,7 +74,7 @@
                 <h3>Steps</h3>
                 <a class="btn btn-outline-success rounded-pill"
                    style="height: fit-content; margin-left: 20px;margin-bottom: 5px"
-                   href="#">
+                   href="{% url 'add-step-recipe' recipe.id %}?hide_back_button=False">
                     <i class="bi bi-plus"></i>
                 </a>
             </div>
@@ -86,7 +86,7 @@
                     </div>
                     <div>
                         <a class="btn btn-primary rounded-pill" style="height: fit-content; margin-right: 5px"
-                           href="#">
+                           href="{% url 'add-step-recipe' recipe.id step.id %}?hide_back_button=False">
                             <i class="bi bi-pencil-square"></i>
                         </a>
                         <a class="btn btn-danger rounded-pill" style="height: fit-content; margin-left: 5px"
@@ -99,6 +99,8 @@
                     </div>
                 </div>
             {% endfor %}
+
+            <a class="btn btn-link" href="{% url 'home' %}">Back Home</a>
 
             <!-- Modal for confirm delete-->
             <div class="modal" tabindex="-1" id="confirmDelete" role="dialog">

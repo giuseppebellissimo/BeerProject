@@ -1,46 +1,58 @@
+{% extends 'beerRecipe/baseHome.html' %}
 {% load crispy_forms_tags %}
 {% load static %}
 
 {% block content %}
     {% spaceless %}
         {% if user.is_authenticated %}
-            <form method="post" id="ingredient-form" action="{% url 'add-ingredient-recipe' recipe_id %}">
-                <h3>Recipe Ingredients</h3>
-                {% csrf_token %}
-                {% crispy ingredient_form %}
-                <h5>Property</h5>
-                <table class="table table-striped">
-                    {{ property_ingredient_recipe.management_form }}
-                    {% for form in property_ingredient_recipe.forms %}
-                        {% if forloop.first %}
-                            <thead>
-                            <tr>
+            <div class="container-fluid">
+                <form method="post" id="ingredient-form"
+                      action="{% if ingredient %}
+                            {% url 'add-ingredient-recipe' recipe.id ingredient.id %}
+                            {% else %}
+                            {% url 'add-ingredient-recipe' recipe.id %}
+                            {% endif %}">
+                    <h3>Recipe Ingredients</h3>
+                    {% csrf_token %}
+                    {% crispy ingredient_form %}
+                    <h5>Property</h5>
+                    <table class="table table-striped">
+                        {{ property_ingredient_recipe.management_form }}
+                        {% for form in property_ingredient_recipe.forms %}
+                            {% if forloop.first %}
+                                <thead>
+                                <tr>
+                                    {% for field in form.visible_fields %}
+                                        <th>{{ field.label|capfirst }}</th>
+                                    {% endfor %}
+                                </tr>
+                                </thead>
+                            {% endif %}
+                            <tr class="{% cycle 'row1' 'row2' %} formset_row">
                                 {% for field in form.visible_fields %}
-                                    <th>{{ field.label|capfirst }}</th>
+                                    <td>
+                                        {% if forloop.first %}
+                                            {% for hidden in form.hidden_fields %}
+                                                {{ hidden }}
+                                            {% endfor %}
+                                        {% endif %}
+                                        {{ field.errors.as_ul }}
+                                        {{ field }}
+                                    </td>
                                 {% endfor %}
                             </tr>
-                            </thead>
+                        {% endfor %}
+                    </table>
+                    <div role="group" style="margin-bottom: 10px">
+                        <button class="btn btn-outline-success" type="submit" id="saveIngredientButton"
+                                style="margin-bottom: 15px">Save Ingredient
+                        </button>
+                        {% if not hide_button %}
+                            <a class="btn btn-link" type="button" href="{% url 'view-recipe' recipe.id %}">Back</a>
                         {% endif %}
-                        <tr class="{% cycle 'row1' 'row2' %} formset_row">
-                            {% for field in form.visible_fields %}
-                                <td>
-                                    {% if forloop.first %}
-                                        {% for hidden in form.hidden_fields %}
-                                            {{ hidden }}
-                                        {% endfor %}
-                                    {% endif %}
-                                    {{ field.errors.as_ul }}
-                                    {{ field }}
-                                </td>
-                            {% endfor %}
-                        </tr>
-                    {% endfor %}
-                </table>
-                <button class="btn btn-outline-success" type="submit" id="saveIngredientButton"
-                        style="margin-bottom: 15px" data-url="{% url 'add-ingredient-recipe' recipe_id %}">Save
-                    Ingredient
-                </button>
-            </form>
+                    </div>
+                </form>
+            </div>
         {% endif %}
 
         <script src="{% static 'formset/jquery_formset.js' %}"></script>
@@ -107,10 +119,10 @@
                             form_data.append(`property-${index}-value`, propertyValue);
                         }
                     });
-                    let url = $(this).data('url');
+                    const formIngredientActionUrl = $('#ingredient-form').attr('action');
                     $.ajax({
                         type: 'POST',
-                        url: url,
+                        url: formIngredientActionUrl,
                         data: form_data,
                         success: function (response) {
                             document.getElementById('ingredient-form').reset();

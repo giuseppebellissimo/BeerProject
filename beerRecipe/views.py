@@ -70,24 +70,47 @@ def home(request):
 
 
 @login_required
-def add_recipe(request):
+def add_recipe(request, recipe_id=None):
+    if recipe_id:
+        try:
+            recipe = Recipe.objects.get(id=recipe_id)
+            initial_data = {
+                'name': recipe.name,
+                'litre': recipe.litre,
+                'ebc': recipe.ebc,
+                'ibu': recipe.ibu,
+                'id_user': recipe.id_user
+            }
+        except ObjectDoesNotExist:
+            return HttpResponseNotFound("Recipe does not exist")
+    else:
+        initial_data = {}
+        recipe = None
+
     if request.method == 'GET':
-        recipe_form = RecipeForm()
+        recipe_form = RecipeForm(initial=initial_data)
         context = {
             'recipe_form': recipe_form,
+            'recipe': recipe
         }
         return render(request, 'beerRecipe/addRecipe.html', context)
     elif request.method == 'POST':
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            recipe_form = RecipeForm(request.POST)
-
-            if recipe_form.is_valid():
-                recipe = recipe_form.save(commit=False)
-                recipe.id_user = request.user
-                recipe.save()
-                return JsonResponse({'success': 'Recipe saved successfully', 'recipe_id': recipe.id})
-            else:
-                return JsonResponse({'error': recipe_form.errors}, status=400)
+            name = request.POST.get('name')
+            litre = request.POST.get('litre')
+            ebc = request.POST.get('ebc')
+            ibu = request.POST.get('ibu')
+            recipe, created = Recipe.objects.update_or_create(
+                id=recipe_id,
+                defaults={
+                    'name': name,
+                    'litre': litre,
+                    'ebc': ebc,
+                    'ibu': ibu,
+                    'id_user': request.user
+                }
+            )
+            return JsonResponse({'success': 'Recipe saved successfully', 'recipe_id': recipe.id})
         else:
             return JsonResponse({'error': 'Invalid AJAX request'}, status=500)
     else:
@@ -95,9 +118,32 @@ def add_recipe(request):
 
 
 @login_required
-def add_ingredient_to_recipe(request, recipe_id):
-    if request.method == 'GET':
-        ingredient_form = IngredientRecipeForm()
+def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
+    try:
+        recipe = Recipe.objects.get(id=recipe_id)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+    hide_button = request.GET.get('hide_back_button', 'true') == 'true'
+    if ingredient_id:
+        try:
+            ingredient = IngredientRecipe.objects.get(id_ingredient=ingredient_id)
+            initial_data = {
+                'name_ingredient': ingredient.id_ingredient.name,
+                'name_category': ingredient.id_ingredient.id_category,
+                'quantity': ingredient.quantity,
+                'measurement_unit': ingredient.measurement_unit,
+
+            }
+            property_data = yaml.safe_load(
+                ingredient.id_ingredient.property) if ingredient.id_ingredient.property else []
+            initial_property_data = [{'name': key, 'value': value} for key, value in property_data.items()]
+            property_ingredient_recipe = property_ingredient_formset(initial=initial_property_data, prefix='property')
+
+        except ObjectDoesNotExist:
+            return HttpResponseNotFound('Ingredient not found')
+    else:
+        ingredient = None
+        initial_data = {}
         initial_property_data = [{'name': 'AA', 'value': ''},
                                  {'name': 'EBC', 'value': ''},
                                  {'name': 'Format', 'value': ''},
@@ -107,12 +153,19 @@ def add_ingredient_to_recipe(request, recipe_id):
             if i < 3:
                 form.fields['name'].disabled = True
 
+    if request.method == 'GET':
+        ingredient_form = IngredientRecipeForm(initial=initial_data)
         context = {
             'property_ingredient_recipe': property_ingredient_recipe,
             'ingredient_form': ingredient_form,
-            'recipe_id': recipe_id
+            'recipe_id': recipe_id,
+            'ingredient': ingredient,
+            'recipe': recipe,
+            'hide_navbar': True,
+            'hide_button': hide_button
         }
         return render(request, 'beerRecipe/addIngredientRecipe.html', context)
+
     elif request.method == 'POST':
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             name_ingredient = request.POST.get('name_ingredient')
@@ -132,18 +185,20 @@ def add_ingredient_to_recipe(request, recipe_id):
             else:
                 category = Category.objects.get(id=name_category)
 
-            ingredient = Ingredient.objects.create(
-                name=name_ingredient,
-                id_category=category,
-                property=properties_yaml,
-            )
-            recipe = Recipe.objects.get(id=recipe_id)
-            IngredientRecipe.objects.create(
+            ingredient, created = Ingredient.objects.update_or_create(
+                id=ingredient_id,
+                defaults={
+                    'name': name_ingredient,
+                    'id_category': category,
+                    'property': properties_yaml,
+                })
+            IngredientRecipe.objects.update_or_create(
                 id_recipe=recipe,
                 id_ingredient=ingredient,
-                quantity=quantity,
-                measurement_unit=measurement_unit,
-            )
+                defaults={
+                    'quantity': quantity,
+                    'measurement_unit': measurement_unit
+                })
             return JsonResponse({'success': 'Ingredient added successfully'})
         else:
             return JsonResponse({'error': 'Invalid AJAX request'}, status=400)
@@ -152,28 +207,49 @@ def add_ingredient_to_recipe(request, recipe_id):
 
 
 @login_required
-def add_step_to_recipe(request, recipe_id):
+def add_step_to_recipe(request, recipe_id, step_id=None):
+    try:
+        recipe = Recipe.objects.get(id=recipe_id)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+    hide_button = request.GET.get('hide_back_button', 'true') == 'true'
+    if step_id:
+        try:
+            step = Step.objects.get(id=step_id)
+            initial_data = [{'index': step.index, 'name': step.name, 'description': step.description}
+                            for step in Step.objects.filter(id_recipe=recipe)]
+        except ObjectDoesNotExist:
+            return HttpResponseNotFound('Step not found')
+    else:
+        initial_data = []
+        step = None
+
     if request.method == 'GET':
-        step_form = step_formset(prefix='step')
+        step_form = step_formset(prefix='step', initial=initial_data)
         context = {
             'step_form': step_form,
-            'recipe_id': recipe_id
+            'recipe_id': recipe_id,
+            'step': step,
+            'recipe': recipe,
+            'hide_navbar': True,
+            'hide_button': hide_button
         }
         return render(request, 'beerRecipe/addStepRecipe.html', context)
     elif request.method == 'POST':
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             total_forms = int(request.POST.get('step-TOTAL_FORMS'))
-            recipe = Recipe.objects.get(id=recipe_id)
             for i in range(total_forms):
                 index = request.POST.get(f'step-{i}-index')
                 name = request.POST.get(f'step-{i}-name')
                 description = request.POST.get(f'step-{i}-description')
-                Step.objects.create(
-                    index=index,
-                    name=name,
-                    description=description,
-                    id_recipe=recipe,
-                )
+                Step.objects.update_or_create(
+                    id=step_id,
+                    defaults={
+                        'index': index,
+                        'name': name,
+                        'description': description,
+                        'id_recipe': recipe
+                    })
             return JsonResponse({'success': 'Step added successfully'})
         else:
             return JsonResponse({'error': 'Invalid AJAX request'}, status=400)
@@ -221,6 +297,27 @@ def remove_step_from_recipe(request, step_id):
         return HttpResponseNotFound()
     step.delete()
     return redirect('view-recipe', recipe)
+
+
+def remove_recipe(request, recipe_id):
+    try:
+        recipe = Recipe.objects.get(id=recipe_id)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound("Recipe does not exist")
+
+    ingredient_recipes = IngredientRecipe.objects.filter(id_recipe=recipe_id)
+    for ingredient_recipe in ingredient_recipes:
+        ingredient = ingredient_recipe.id_ingredient
+        ingredient_recipe.delete()
+        if not (IngredientRecipe.objects.filter(id_ingredient=ingredient).exists() or
+                InventoryIngredient.objects.filter(id_ingredient=ingredient).exists()):
+            ingredient.delete()
+
+    for step in Step.objects.filter(id_recipe=recipe_id):
+        step.delete()
+
+    recipe.delete()
+    return redirect('home')
 
 
 @login_required

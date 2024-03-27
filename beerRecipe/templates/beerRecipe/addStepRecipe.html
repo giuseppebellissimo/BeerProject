@@ -1,10 +1,16 @@
+{% extends 'beerRecipe/baseHome.html' %}
 {% load static %}
 {% load crispy_forms_filters %}
 
 {% block content %}
     {% spaceless %}
         {% if user.is_authenticated %}
-            <form method="post" id="step-form" action="{% url 'add-step-recipe' recipe_id %}">
+            <form method="post" id="step-form"
+                  action="{% if step %}
+                            {% url 'add-step-recipe' recipe.id step.id %}
+                            {% else %}
+                            {% url 'add-step-recipe' recipe.id %}
+                            {% endif %}">
                 <h3>Recipe Steps</h3>
                 <table class="table table-striped">
                     {% csrf_token %}
@@ -36,9 +42,11 @@
                 </table>
                 <div role="group" style="margin-bottom: 10px">
                     <button class="btn btn-outline-success" type="submit" id="saveStepButton"
-                            style="margin-bottom: 15px" data-url="{% url 'add-step-recipe' recipe_id %}">Save Step
+                            style="margin-bottom: 15px">Save Step
                     </button>
-                    <a class="btn btn-link" type="button" href="{% url 'home' %}">Back Home</a>
+                    {% if not hide_button %}
+                        <a class="btn btn-link" type="button" href="{% url 'view-recipe' recipe.id %}">Back</a>
+                    {% endif %}
                 </div>
             </form>
         {% endif %}
@@ -70,16 +78,15 @@
                 $('#step-form').find(':input[name$="-TOTAL_FORMS"], :input[name$="-INITIAL_FORMS"], :input[name$="-MIN_NUM_FORMS"], :input[name$="-MAX_NUM_FORMS"]').each(function () {
                     form_data.append($(this).attr('name'), $(this).val());
                 });
-
-                let url = $(this).data('url');
+                const formStepActionUrl = $('#step-form').attr('action');
                 $.ajax({
                     type: 'POST',
-                    url: url,
+                    url: formStepActionUrl,
                     data: form_data,
                     success: function (response) {
+                        document.getElementById('step-form').reset();
                         $('#message-content').text('Step added successfully');
                         $('#message-container').removeClass('d-none alert-danger').addClass('alert-success show');
-                        document.getElementById('step-form').reset();
                         console.log(response);
                     },
                     error: function (error) {

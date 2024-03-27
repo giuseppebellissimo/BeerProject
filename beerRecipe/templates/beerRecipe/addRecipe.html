@@ -13,7 +13,12 @@
             </div>
             <h3>Recipe</h3>
             <div class="container-fluid" id="recipe-container">
-                <form id="recipe-form" method="post" action="{% url 'add-recipe' %}">
+                <form id="recipe-form" method="post"
+                      action="{% if recipe %}
+                                {% url 'add-recipe' recipe.id %}
+                                {% else %}
+                                {% url 'add-recipe' %}
+                                {% endif %}">
                     {% csrf_token %}
                     {% crispy recipe_form %}
                 </form>
@@ -28,11 +33,12 @@
                         data-url-template="{% url 'add-step-recipe' 0 %}">
                     Add Step
                 </button>
+                <a class="btn btn-link" href="{% url 'home' %}">Back Home</a>
             </div>
-            <hr>
-            <div class="container-fluid" id="ingredient-container"></div>
-            <hr>
-            <div class="container-fluid" id="step-container"></div>
+
+            <div class="container-fluid" id="ingredient-container" style="margin-top: 25px"></div>
+
+            <div class="container-fluid" id="step-container" style="margin-top: 25px"></div>
         {% endif %}
 
         <script src="{% static 'formset/jquery_formset.js' %}"></script>
