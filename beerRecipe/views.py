@@ -321,20 +321,56 @@ def remove_recipe(request, recipe_id):
 
 
 @login_required
-def add_inventory(request):
+def add_inventory(request, inventory_id=None):
+    if inventory_id:
+        try:
+            inventory = Inventory.objects.get(id=inventory_id)
+            initial_data = {
+                'name': inventory.name,
+            }
+        except ObjectDoesNotExist:
+            return HttpResponseNotFound("Inventory does not exist")
+    else:
+        initial_data = {}
+        inventory = None
+
+    if request.method == 'GET':
+        inventory_form = AddInventoryForm(initial=initial_data)
+        context = {
+            'inventory_form': inventory_form,
+            'inventory': inventory
+        }
+        return render(request, 'beerRecipe/addInventory.html', context)
     if request.method == 'POST':
-        inventory_form = AddInventoryForm(request.POST)
+        inventory_form = AddInventoryForm(request.POST, instance=inventory)
         if inventory_form.is_valid():
-            names = inventory_form.cleaned_data.get('name')
-            users = User.objects.filter(id=request.user.id)
-            instance = Inventory.objects.create(name=names)
-            instance.id_user.set(users)
+            new_inventory = inventory_form.save(commit=False)
+            if not inventory_id:
+                new_inventory.save()
+                new_inventory.id_user.set([request.user])
+            else:
+                new_inventory.save()
             return redirect('home')
         else:
             return render(request, 'beerRecipe/addInventory.html', {'error': inventory_form.errors})
-    else:
-        inventory_form = AddInventoryForm()
-        return render(request, 'beerRecipe/addInventory.html', {'inventory_form': inventory_form})
+
+
+def remove_inventory(request, inventory_id):
+    try:
+        inventory = Inventory.objects.get(id=inventory_id)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound("Inventory does not exist")
+
+    ingredient_inventories = InventoryIngredient.objects.filter(id_inventory=inventory_id)
+    for ingredient_inventory in ingredient_inventories:
+        ingredient = ingredient_inventory.id_ingredient
+        ingredient_inventory.delete()
+        if not (IngredientRecipe.objects.filter(id_ingredient=ingredient).exists() or
+                InventoryIngredient.objects.filter(id_ingredient=ingredient).exists()):
+            ingredient.delete()
+
+    inventory.delete()
+    return redirect('home')
 
 
 @login_required
@@ -384,12 +420,13 @@ def remove_ingredient_from_inventory(request, ingredient_id):
     try:
         ingredient = Ingredient.objects.get(id=ingredient_id)
         inventory_ingredient = InventoryIngredient.objects.get(id_ingredient=ingredient_id)
-        inventory = inventory_ingredient.id_inventory.id
+        inventory = Inventory.objects.get(id=inventory_ingredient.id_inventory.id)
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
     ingredient.delete()
     inventory_ingredient.delete()
-    return redirect('list_ingredient', inventory)
+    inventory.save()
+    return redirect('list_ingredient', inventory.id)
 
 
 @login_required
@@ -477,6 +514,7 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
                         'measurement_unit': measurement_unit,
                         'expiry_date': expiry_date,
                     })
+                inventory.save()
                 return JsonResponse({'success': 'Ingredient added successfully'})
             except Exception as e:
                 return JsonResponse({'error': e}, status=500)
