@@ -11,7 +11,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             </div>
-            <h3>Recipe</h3>
+            <h3 style="margin-left: 12px">Recipe</h3>
             <div class="container-fluid" id="recipe-container">
                 <form id="recipe-form" method="post"
                       action="{% if recipe %}
@@ -22,7 +22,7 @@
                     {% csrf_token %}
                     {% crispy recipe_form %}
                 </form>
-                <button class="btn btn-outline-success" type="button" id="saveRecipeButton">Save Recipe</button>
+                <button class="btn btn-success" type="button" id="saveRecipeButton">Save Recipe</button>
             </div>
             <div class="container-fluid d-none" id="action-buttons">
                 <button type="button" id="addIngredientButton" class="btn btn-primary"
@@ -30,10 +30,15 @@
                     Add Ingredient
                 </button>
                 <button type="button" id="addStepButton" class="btn btn-primary"
-                        data-url-template="{% url 'add-step-recipe' 0 %}">
+                        data-url-template="{% url 'add-step-recipe' 0 %}"
+                        style="margin-left: 5px">
                     Add Step
                 </button>
-                <a class="btn btn-link" href="{% url 'home' %}">Back Home</a>
+                <button class="btn btn-success" type="button" id="updateRecipeButton" style="margin-left: 5px"
+                        data-base-url="{% url 'add-recipe' %}">
+                    Update Recipe
+                </button>
+                <a class="btn btn-link" href="{% url 'home' %}" style="margin-left: 5px">Back Home</a>
             </div>
 
             <div class="container-fluid" id="ingredient-container" style="margin-top: 25px"></div>
@@ -63,10 +68,35 @@
                             if (response.recipe_id) {
                                 $('#saveRecipeButton').hide();
                                 $('#action-buttons').removeClass('d-none');
-                                $('#recipe-form').find('input, textarea,select').prop('disabled', true);
                                 globalRecipeId = response.recipe_id;
                             }
                             $('#message-content').text('Recipe added successfully');
+                            $('#message-container').removeClass('d-none alert-danger').addClass('alert-success show');
+                            console.log(response)
+                        },
+                        error: function (error) {
+                            $('#message-content').text('An error occurred. Please try again.');
+                            $('#message-container').removeClass('d-none alert-success').addClass('alert-danger show');
+                            console.log(error);
+                        },
+                        contentType: false,
+                        processData: false,
+                    });
+                    event.preventDefault();
+                });
+
+                $('#updateRecipeButton').on('click', function () {
+                    const form_data = new FormData(document.getElementById('recipe-form'));
+                    form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
+                    const baseUrl = $(this).data('base-url');
+                    const url = baseUrl + (globalRecipeId ? globalRecipeId + '/' : '');
+
+                    $.ajax({
+                        type: 'POST',
+                        url: url,
+                        data: form_data,
+                        success: function (response) {
+                            $('#message-content').text('Recipe update successfully');
                             $('#message-container').removeClass('d-none alert-danger').addClass('alert-success show');
                             console.log(response)
                         },

@@ -1,3 +1,5 @@
+import json
+
 import yaml
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
@@ -66,7 +68,21 @@ def logout_user(request):
 def home(request):
     recipes = Recipe.objects.filter(id_user=request.user)
     inventories = Inventory.objects.filter(id_user=request.user)
-    return render(request, 'beerRecipe/home.html', {'recipes': recipes, 'inventories': inventories})
+    default_inventory = inventories.filter(is_default=True).first()
+    return render(request, 'beerRecipe/home.html',
+                  {'recipes': recipes, 'inventories': inventories, 'default_inventory': default_inventory})
+
+
+@login_required
+def set_default_inventory(request, inventory_id):
+    try:
+        Inventory.objects.filter(id_user=request.user).update(is_default=False)
+        default_inventory = Inventory.objects.get(id=inventory_id, id_user=request.user)
+        default_inventory.is_default = True
+        default_inventory.save()
+    except Inventory.DoesNotExist:
+        return HttpResponseNotFound("Inventory does not exist")
+    return redirect('home')
 
 
 @login_required
@@ -124,6 +140,8 @@ def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
     hide_button = request.GET.get('hide_back_button', 'true') == 'true'
+    inventory = Inventory.objects.filter(id_user=request.user)
+    default_inventory = inventory.filter(is_default=True).first()
     if ingredient_id:
         try:
             ingredient = IngredientRecipe.objects.get(id_ingredient=ingredient_id)
@@ -162,7 +180,8 @@ def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
             'ingredient': ingredient,
             'recipe': recipe,
             'hide_navbar': True,
-            'hide_button': hide_button
+            'hide_button': hide_button,
+            'default_inventory': default_inventory
         }
         return render(request, 'beerRecipe/addIngredientRecipe.html', context)
 
@@ -204,6 +223,62 @@ def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
             return JsonResponse({'error': 'Invalid AJAX request'}, status=400)
     else:
         return HttpResponseNotAllowed(['GET', 'POST'])
+
+
+@login_required
+def load_ingredients_from_inventory(request):
+    inventory = Inventory.objects.filter(id_user=request.user)
+    default_inventory = inventory.filter(is_default=True).first()
+
+    if default_inventory:
+        inventory_ingredients = InventoryIngredient.objects.filter(id_inventory=default_inventory).select_related(
+            'id_ingredient')
+        ingredients = [{
+            'id': inv_ingredient.id_ingredient.id,
+            'name': inv_ingredient.id_ingredient.name,
+            'quantity': inv_ingredient.quantity,
+            'measurement_unit': inv_ingredient.measurement_unit
+        } for inv_ingredient in inventory_ingredients]
+    else:
+        ingredients = []
+    return JsonResponse(list(ingredients), safe=False)
+
+
+@login_required
+def add_selected_ingredients(request):
+    if request.method == 'POST':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            recipe_id = request.POST.get('recipe_id')
+            selected_ingredients = request.POST.getlist('selected_ingredients[]')
+
+            try:
+                recipe = Recipe.objects.get(id=recipe_id)
+            except ObjectDoesNotExist:
+                return JsonResponse({'error': 'Recipe does not exist'}, status=404)
+
+            for item in selected_ingredients:
+                print('Item: ', item)
+                try:
+                    inventory_ingredient = InventoryIngredient.objects.get(id=item)
+                    ingredient = Ingredient.objects.get(id=item)
+                    quantity = inventory_ingredient.quantity
+                    measurement_unit = inventory_ingredient.measurement_unit
+                    print('Recipe: ', recipe)
+                    print('Ingredient: ', ingredient)
+                    print('Quantity: ', quantity)
+                    print('Measurement: ', measurement_unit)
+                    IngredientRecipe.objects.create(
+                        id_recipe=recipe,
+                        id_ingredient=ingredient,
+                        quantity=quantity,
+                        measurement_unit=measurement_unit
+                    )
+                except ObjectDoesNotExist:
+                    return HttpResponseNotFound('Error')
+
+            return JsonResponse({'success': 'Ingredients added successfully!'})
+        else:
+            return JsonResponse({'error': 'Invalid AJAX request'}, status=400)
 
 
 @login_required
@@ -445,6 +520,7 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
                 'quantity': ingredient.quantity,
                 'measurement_unit': ingredient.measurement_unit,
                 'expiry_date': ingredient.expiry_date,
+                'comment': ingredient.id_ingredient.comment
             }
 
             property_data = yaml.safe_load(
@@ -485,6 +561,7 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
             quantity = request.POST.get('quantity')
             measurement_unit = request.POST.get('measurement_unit')
             expiry_date = request.POST.get('expiry_date')
+            comment = request.POST.get('comment')
 
             if name_category and name_new_category:
                 return JsonResponse(
@@ -493,6 +570,20 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
 
             properties = get_data_formset(request)
             properties_yaml = yaml.dump(properties)
+
+            conversion = {
+                'Kg': lambda x: x * 1000,
+                'hg': lambda x: x * 100,
+                'gr': lambda x: x,
+                'mg': lambda x: x / 1000,
+                'L': lambda x: x * 1000,
+                'hl': lambda x: x * 100000,
+                'ml': lambda x: x,
+                'SACHET': lambda x: x * 7,
+            }
+            original_unit = measurement_unit
+            if measurement_unit in conversion:
+                quantity = conversion[measurement_unit](float(quantity))
 
             try:
                 if name_new_category:
@@ -505,14 +596,16 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
                                                                               'name': name_ingredient,
                                                                               'id_category': category,
                                                                               'property': properties_yaml,
+                                                                              'comment': comment
                                                                           })
                 InventoryIngredient.objects.update_or_create(
                     id_inventory=inventory,
                     id_ingredient=ingredient,
                     defaults={
                         'quantity': quantity,
-                        'measurement_unit': measurement_unit,
+                        'measurement_unit': 'gr',
                         'expiry_date': expiry_date,
+                        'original_unit': original_unit
                     })
                 inventory.save()
                 return JsonResponse({'success': 'Ingredient added successfully'})

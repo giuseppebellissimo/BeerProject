@@ -47,11 +47,40 @@
                         <button class="btn btn-outline-success" type="submit" id="saveIngredientButton"
                                 style="margin-bottom: 15px">Save Ingredient
                         </button>
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal"
+                                data-bs-target="#ingredientModal" style="margin-bottom: 10px; margin-left: 10px"
+                                data-url="{% url 'load-ingredient' %}">
+                            Load ingredient from {{ default_inventory.name }}
+                        </button>
                         {% if not hide_button %}
                             <a class="btn btn-link" type="button" href="{% url 'view-recipe' recipe.id %}">Back</a>
                         {% endif %}
                     </div>
                 </form>
+
+                <!-- Modal for load ingredient from default inventory-->
+                <div class="modal fade" id="ingredientModal" tabindex="-1" aria-labelledby="ingredientModalLabel"
+                     aria-hidden="true" role="dialog">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="ingredientModalLabel">Ingredient
+                                    of {{ default_inventory.name }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div id="availableIngredients"></div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-primary" id="addSelectedIngredients">Add Selected
+                                    Ingredients
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         {% endif %}
 
@@ -71,6 +100,8 @@
 
             $('#div_id_name_category').hide();
             $('#div_id_name_new_category').hide();
+            const loadIngredientUrl = "{% url 'load-ingredient' %}";
+            const addSelectedIngredientUrl = "{% url 'add-selected-ingredients' %}";
             $(document).ready(function () {
                 let name_category = $('#id_category_choices_0');
                 let name_new_category = $('#id_category_choices_1');
@@ -139,6 +170,57 @@
                         processData: false,
                     });
                     event.preventDefault();
+                });
+
+                $('#ingredientModal').on('show.bs.modal', function () {
+                    $.ajax({
+                        url: loadIngredientUrl,
+                        type: 'GET',
+                        success: function (response) {
+                            $('#availableIngredients').empty();
+                            response.forEach(function (ingredient) {
+                                $('#availableIngredients').append(
+                                    `<input type="checkbox" name="ingredient" value="${ingredient.id}"> ${ingredient.name}<br>`
+                                );
+                            });
+                            $('#message-content').text('Ingredient added successfully');
+                            $('#message-container').removeClass('d-none alert-danger').addClass('alert-success show');
+                            console.log(response)
+                        },
+                        error: function (error) {
+                            $('#message-content').text('An error occurred. Please try again.');
+                            $('#message-container').removeClass('d-none alert-success').addClass('alert-danger show');
+                            console.log(error);
+                        }
+                    });
+                });
+
+                $('#addSelectedIngredients').on('click', function () {
+                    let selectedIngredients = [];
+                    $('#availableIngredients input[name="ingredient"]:checked').each(function () {
+                        selectedIngredients.push($(this).val());
+                    });
+
+                    let data = {
+                        'csrfmiddlewaretoken': document.getElementsByName('csrfmiddlewaretoken')[0].value,
+                        'recipe_id': {{ recipe_id }},
+                        'selected_ingredients': selectedIngredients
+                    };
+
+                    $.ajax({
+                        url: addSelectedIngredientUrl,
+                        type: 'POST',
+                        data: data,
+                        success: function (response) {
+                            console.log(response);
+                            $('#ingredientModal').modal('hide');
+                        },
+                        error: function (error) {
+                            console.log(error);
+                        }
+                    });
+
+                    $('#ingredientModal').modal('hide');
                 });
             })
         </script>

@@ -31,7 +31,7 @@
                             <td>{{ ingredient.id_ingredient.name }}</td>
                             <td>{{ ingredient.id_ingredient.id_category.name }}</td>
                             <td>{{ ingredient.quantity }}</td>
-                            <td>{{ ingredient.measurement_unit }}</td>
+                            <td>{{ ingredient.original_unit }}</td>
                             <td>{{ ingredient.expiry_date|date:"m/d/Y" }}</td>
                             <td>
                                 {% for name,value in ingredient.id_ingredient.properties_dict.items %}
@@ -40,7 +40,7 @@
                             </td>
                             <td>
                                 <a class="btn btn-primary rounded-pill" style="height: fit-content; margin-right: 5px"
-                                   href="{% url 'manage-ingredient-inventory' inventories.id ingredient.id %}">
+                                   href="{% url 'manage-ingredient-inventory' inventories.id ingredient.id_ingredient.id %}">
                                     <i class="bi bi-pencil-square"></i>
                                 </a>
                                 <a class="btn btn-danger rounded-pill" style="height: fit-content; margin-left: 5px"

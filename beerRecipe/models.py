@@ -7,6 +7,17 @@ CATEGORY_CHOICES = (
     ("NEW", "New Category Name")
 )
 
+MEASUREMENT_CHOICES = (
+    ("Kg", "Kg"),
+    ("hg", "hg"),
+    ("gr", "gr"),
+    ("mg", "mg"),
+    ("L", "L"),
+    ("hl", "hl"),
+    ("ml", "ml"),
+    ("SACHET", "Sachet (7 gr)")
+)
+
 
 # Create your models here.
 class Category(models.Model):
@@ -23,6 +34,7 @@ class Ingredient(models.Model):
     name = models.CharField(max_length=100)
     id_category = models.ForeignKey(Category, on_delete=models.CASCADE)
     property = YAMLField(blank=True)
+    comment = models.TextField(blank=True)
 
     def __str__(self):
         return self.name
@@ -52,6 +64,7 @@ class Inventory(models.Model):
     last_update = models.DateTimeField(auto_now=True)
     creation_date = models.DateTimeField(auto_now_add=True)
     ingredients = models.ManyToManyField(Ingredient, through='InventoryIngredient')
+    is_default = models.BooleanField(default=False)
 
     class Meta:
         verbose_name_plural = 'Inventories'
@@ -85,3 +98,4 @@ class InventoryIngredient(models.Model):
     quantity = models.DecimalField(decimal_places=2, max_digits=10)
     measurement_unit = models.CharField(max_length=100)
     expiry_date = models.DateField()
+    original_unit = models.CharField(max_length=10)
