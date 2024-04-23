@@ -56,6 +56,7 @@ class IngredientRecipeForm(forms.ModelForm):
                                                  widget=forms.CheckboxSelectMultiple)
     name_category = forms.ModelChoiceField(queryset=Category.objects.all(), empty_label='---')
     name_new_category = forms.CharField(max_length=100)
+    measurement_unit = forms.ChoiceField(choices=MEASUREMENT_CHOICES, required=False)
 
     class Meta:
         model = IngredientRecipe

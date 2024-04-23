@@ -23,6 +23,11 @@
                     {% crispy recipe_form %}
                 </form>
                 <button class="btn btn-success" type="button" id="saveRecipeButton">Save Recipe</button>
+                {% if not hide_button %}
+                    <a class="btn btn-link" href="{% url 'home' %}" style="margin-left: 5px">Back Home</a>
+                    {% else %}
+                    <a class="btn btn-link" href="{% url 'view-recipe' recipe.id %}" style="margin-left: 5px">Back</a>
+                {% endif %}
             </div>
             <div class="container-fluid d-none" id="action-buttons">
                 <button type="button" id="addIngredientButton" class="btn btn-primary"
@@ -38,7 +43,6 @@
                         data-base-url="{% url 'add-recipe' %}">
                     Update Recipe
                 </button>
-                <a class="btn btn-link" href="{% url 'home' %}" style="margin-left: 5px">Back Home</a>
             </div>
 
             <div class="container-fluid" id="ingredient-container" style="margin-top: 25px"></div>
