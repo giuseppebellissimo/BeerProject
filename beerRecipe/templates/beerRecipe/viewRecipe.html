@@ -25,7 +25,7 @@
                 <h3>Ingredients</h3>
                 <a class="btn btn-outline-success rounded-pill"
                    style="height: fit-content; margin-left: 20px;margin-bottom: 5px"
-                   href="{% url 'add-ingredient-recipe' recipe.id %}?hide_back_button=False">
+                   href="{% url 'add-ingredient-recipe' recipe.id %}?hide_back_button=False&hide_navbar_ingredient=False">
                     <i class="bi bi-plus"></i>
                 </a>
             </div>
@@ -45,8 +45,8 @@
                     <tr>
                         <td>{{ ingredient.id_ingredient.name }}</td>
                         <td>{{ ingredient.id_ingredient.id_category.name }}</td>
-                        <td>{{ ingredient.quantity }}</td>
-                        <td>{{ ingredient.measurement_unit }}</td>
+                        <td>{{ ingredient.display_quantity }}</td>
+                        <td>{{ ingredient.original_unit }}</td>
                         <td>
                             {% for name,value in ingredient.id_ingredient.properties_dict.items %}
                                 <strong>{{ name }}:</strong> {{ value }}<br>
@@ -74,7 +74,7 @@
                 <h3>Steps</h3>
                 <a class="btn btn-outline-success rounded-pill"
                    style="height: fit-content; margin-left: 20px;margin-bottom: 5px"
-                   href="{% url 'add-step-recipe' recipe.id %}?hide_back_button=False">
+                   href="{% url 'add-step-recipe' recipe.id %}?hide_back_button=False&hide_navbar_ingredient=False">
                     <i class="bi bi-plus"></i>
                 </a>
             </div>

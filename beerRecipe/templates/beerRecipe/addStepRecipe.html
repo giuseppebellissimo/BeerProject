@@ -84,7 +84,7 @@
                     url: formStepActionUrl,
                     data: form_data,
                     success: function (response) {
-                        document.getElementById('step-form').reset();
+                        clearFormFields();
                         $('#message-content').text('Step added successfully');
                         $('#message-container').removeClass('d-none alert-danger').addClass('alert-success show');
                         console.log(response);
@@ -98,7 +98,15 @@
                     processData: false,
                 });
                 event.preventDefault();
-            })
+            });
+
+            function clearFormFields() {
+                document.querySelectorAll('.step_formset_row').forEach((element) => {
+                    element.querySelectorAll('input[type="number"], input[type="text"], textarea').forEach((input) => {
+                        input.value = '';
+                    });
+                });
+            }
         </script>
     {% endspaceless %}
 {% endblock %}

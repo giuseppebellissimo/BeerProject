@@ -140,8 +140,10 @@ def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
     hide_button = request.GET.get('hide_back_button', 'true') == 'true'
+    hide_navbar = request.GET.get('hide_navbar_ingredient', 'true') == 'true'
     inventory = Inventory.objects.filter(id_user=request.user)
     default_inventory = inventory.filter(is_default=True).first()
+
     if ingredient_id:
         try:
             ingredient = IngredientRecipe.objects.get(id_ingredient=ingredient_id)
@@ -177,7 +179,7 @@ def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
             'ingredient': ingredient,
             'recipe': recipe,
             'default_inventory': default_inventory,
-            'hide_navbar': True,
+            'hide_navbar': hide_navbar,
             'hide_button': hide_button
         }
         return render(request, 'beerRecipe/addIngredientRecipe.html', context)
@@ -189,22 +191,12 @@ def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
             name_new_category = request.POST.get('name_new_category')
             quantity = request.POST.get('quantity')
             measurement_unit = request.POST.get('measurement_unit')
+            ingredient_selected = request.POST.get('ingredient_selected')
             properties = get_data_formset(request)
             properties_yaml = yaml.dump(properties)
 
-            conversion = {
-                'Kg': lambda x: x * 1000,
-                'hg': lambda x: x * 100,
-                'gr': lambda x: x,
-                'mg': lambda x: x / 1000,
-                'L': lambda x: x * 1000,
-                'hl': lambda x: x * 100000,
-                'ml': lambda x: x,
-                'SACHET': lambda x: x * 7,
-            }
             original_unit = measurement_unit
-            if measurement_unit in conversion:
-                quantity = conversion[measurement_unit](float(quantity))
+            quantity, measurement_unit = convert_measurement(request, quantity, measurement_unit)
 
             if name_category and name_new_category:
                 return JsonResponse(
@@ -222,26 +214,75 @@ def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
                     'id_category': category,
                     'property': properties_yaml,
                 })
+
             IngredientRecipe.objects.update_or_create(
                 id_recipe=recipe,
                 id_ingredient=ingredient,
                 defaults={
                     'quantity': quantity,
-                    'measurement_unit': measurement_unit
-                })
-            InventoryIngredient.objects.update_or_create(
-                id_inventory=default_inventory,
-                id_ingredient=ingredient,
-                defaults={
-                    'quantity': 0,
-                    'measurement_unit': 'gr',
+                    'measurement_unit': measurement_unit,
                     'original_unit': original_unit
                 })
+
+            if ingredient_id is None and ingredient_selected == '':
+                InventoryIngredient.objects.update_or_create(
+                    id_inventory=default_inventory,
+                    id_ingredient=ingredient,
+                    defaults={
+                        'quantity': 0,
+                        'measurement_unit': measurement_unit,
+                        'original_unit': original_unit,
+                        'expiry_date': None
+                    })
             return JsonResponse({'success': 'Ingredient added successfully'})
         else:
             return JsonResponse({'error': 'Invalid AJAX request'}, status=400)
     else:
         return HttpResponseNotAllowed(['GET', 'POST'])
+
+
+@login_required
+def convert_measurement(request, quantity, measurement_unit):
+    conversion = {
+        'Kg': lambda x: x * 1000,
+        'hg': lambda x: x * 100,
+        'gr': lambda x: x,
+        'mg': lambda x: x / 1000,
+        'L': lambda x: x,
+        'cl': lambda x: x / 100,
+        'ml': lambda x: x / 1000,
+        'DRY_YEASTS_11': lambda x: x * 11,
+        'DRY_YEASTS_100': lambda x: x * 100,
+        'DRY_YEASTS_500': lambda x: x * 500,
+    }
+    final_unit = {
+        'Kg': 'gr', 'hg': 'gr', 'mg': 'gr', 'gr': 'gr', 'DRY_YEASTS_11': 'gr', 'DRY_YEASTS_100': 'gr',
+        'DRY_YEASTS_500': 'gr', 'L': 'L', 'cl': 'L', 'ml': 'L'
+    }
+    if measurement_unit in conversion:
+        converted_quantity = conversion[measurement_unit](float(quantity))
+        new_measurement_unit = final_unit[measurement_unit]
+        return converted_quantity, new_measurement_unit
+    return float(quantity), measurement_unit
+
+
+def inverse_convert_measurement(request, quantity, measurement_unit):
+    conversion = {
+        'Kg': lambda x: x / 1000,
+        'hg': lambda x: x / 100,
+        'gr': lambda x: x,
+        'mg': lambda x: x * 1000,
+        'L': lambda x: x,
+        'cl': lambda x: x * 100,
+        'ml': lambda x: x * 1000,
+        'DRY_YEASTS_11': lambda x: x / 11,
+        'DRY_YEASTS_100': lambda x: x / 100,
+        'DRY_YEASTS_500': lambda x: x / 500,
+    }
+    if measurement_unit in conversion:
+        converted_quantity = conversion[measurement_unit](float(quantity))
+        return converted_quantity
+    return float(quantity)
 
 
 @login_required
@@ -264,41 +305,24 @@ def load_ingredients_from_inventory(request):
 
 
 @login_required
-def add_selected_ingredients(request, recipe_id, ingredient_id):
-    if request.method == 'GET':
-        try:
-            ingredient = InventoryIngredient.objects.get(id_ingredient=ingredient_id)
-            recipe = Recipe.objects.get(id=recipe_id)
-        except ObjectDoesNotExist:
-            return HttpResponseNotFound('Ingredient o Recipe not found')
+def add_selected_ingredients(request):
+    ingredient_id = request.GET.get('ingredient_id')
+    try:
+        ingredient = InventoryIngredient.objects.get(id_ingredient=ingredient_id)
+    except ObjectDoesNotExist:
+        return JsonResponse({'error': 'Ingredient not found'}, status=400)
 
-        inventory = Inventory.objects.filter(id_user=request.user)
-        default_inventory = inventory.filter(is_default=True).first()
-        hide_button = request.GET.get('hide_back_button', 'true') == 'true'
-
-        initial_data = {
-            'name_ingredient': ingredient.id_ingredient.name,
-            'name_category': ingredient.id_ingredient.id_category,
-            'quantity': ingredient.quantity,
-            'measurement_unit': ingredient.measurement_unit,
-        }
-        property_data = yaml.safe_load(
-            ingredient.id_ingredient.property) if ingredient.id_ingredient.property else {}
-        initial_property_data = [{'name': key, 'value': value} for key, value in property_data.items()]
-        property_ingredient_recipe = property_ingredient_formset(initial=initial_property_data, prefix='property')
-        ingredient_form = IngredientRecipeForm(initial=initial_data)
-
-        context = {
-            'property_ingredient_recipe': property_ingredient_recipe,
-            'ingredient_form': ingredient_form,
-            'ingredient': ingredient,
-            'recipe': recipe,
-            'default_inventory': default_inventory,
-            'hide_navbar': True,
-            'hide_button': hide_button
-        }
-
-        return render(request, 'beerRecipe/addIngredientRecipe.html', context)
+    property_data = yaml.safe_load(
+        ingredient.id_ingredient.property) if ingredient.id_ingredient.property else []
+    properties_list = [{'name': key, 'value': value} for key, value in property_data.items()]
+    ingredient_data = {
+        'name_ingredient': ingredient.id_ingredient.name,
+        'name_category': ingredient.id_ingredient.id_category.id,
+        'quantity': ingredient.quantity,
+        'measurement_unit': ingredient.original_unit,
+        'properties': properties_list
+    }
+    return JsonResponse(ingredient_data)
 
 
 @login_required
@@ -308,6 +332,7 @@ def add_step_to_recipe(request, recipe_id, step_id=None):
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
     hide_button = request.GET.get('hide_back_button', 'true') == 'true'
+    hide_navbar = request.GET.get('hide_navbar_ingredient', 'true') == 'true'
     if step_id:
         try:
             step = Step.objects.get(id=step_id)
@@ -326,7 +351,7 @@ def add_step_to_recipe(request, recipe_id, step_id=None):
             'recipe_id': recipe_id,
             'step': step,
             'recipe': recipe,
-            'hide_navbar': True,
+            'hide_navbar': hide_navbar,
             'hide_button': hide_button
         }
         return render(request, 'beerRecipe/addStepRecipe.html', context)
@@ -357,7 +382,13 @@ def view_recipes(request, recipe_id):
     recipe = Recipe.objects.get(id=recipe_id)
     ingredients = IngredientRecipe.objects.filter(id_recipe=recipe_id)
     steps = Step.objects.filter(id_recipe=recipe_id)
+
     for ingredient in ingredients:
+        measurement_unit = ingredient.original_unit
+        quantity = ingredient.quantity
+        converted_quantity = inverse_convert_measurement(request, quantity, measurement_unit)
+        ingredient.display_quantity = converted_quantity
+
         property_string = ingredient.id_ingredient.property
         if property_string:
             property_dict = yaml.safe_load(property_string)
@@ -378,6 +409,7 @@ def remove_ingredient_form_recipe(request, ingredient_id):
         recipe = ingredient_recipe.id_recipe.id
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
+
     ingredient.delete()
     ingredient_recipe.delete()
     return redirect('view-recipe', recipe)
@@ -475,21 +507,13 @@ def list_ingredient(request, inventory_id):
     inventories = Inventory.objects.get(id=inventory_id)
     ingredients = InventoryIngredient.objects.filter(id_inventory=inventory_id)
     categories = Category.objects.all()
-    inverse_conversion = {
-        'Kg': lambda x: x / 1000,
-        'hg': lambda x: x / 100,
-        'gr': lambda x: x,
-        'mg': lambda x: x * 1000,
-        'L': lambda x: x / 1000,
-        'hl': lambda x: x / 100000,
-        'ml': lambda x: x,
-        'SACHET': lambda x: x / 7,
-    }
+
     for ingredient in ingredients:
-        original_unit = ingredient.original_unit
-        converted_quantity = inverse_conversion.get(original_unit, lambda x: x)(ingredient.quantity)
+        measurement_unit = ingredient.original_unit
+        quantity = ingredient.quantity
+        converted_quantity = inverse_convert_measurement(request, quantity, measurement_unit)
         ingredient.display_quantity = converted_quantity
-        print(original_unit)
+
         property_string = ingredient.id_ingredient.property
         if property_string:
             property_dict = yaml.safe_load(property_string)
@@ -599,6 +623,9 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
             expiry_date = request.POST.get('expiry_date')
             comment = request.POST.get('comment')
 
+            original_unit = measurement_unit
+            quantity, measurement_unit = convert_measurement(request, quantity, measurement_unit)
+
             if name_category and name_new_category:
                 return JsonResponse(
                     {'error': "Both 'Name Category' and 'New Category Name' cannot be filled at the same time."},
@@ -606,21 +633,6 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
 
             properties = get_data_formset(request)
             properties_yaml = yaml.dump(properties)
-
-            conversion = {
-                'Kg': lambda x: x * 1000,
-                'hg': lambda x: x * 100,
-                'gr': lambda x: x,
-                'mg': lambda x: x / 1000,
-                'L': lambda x: x * 1000,
-                'hl': lambda x: x * 100000,
-                'ml': lambda x: x,
-                'SACHET': lambda x: x * 7,
-            }
-            original_unit = measurement_unit
-            print(original_unit)
-            if measurement_unit in conversion:
-                quantity = conversion[measurement_unit](float(quantity))
 
             try:
                 if name_new_category:
@@ -640,7 +652,7 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
                     id_ingredient=ingredient,
                     defaults={
                         'quantity': quantity,
-                        'measurement_unit': 'gr',
+                        'measurement_unit': measurement_unit,
                         'expiry_date': expiry_date,
                         'original_unit': original_unit
                     })

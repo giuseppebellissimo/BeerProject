@@ -69,7 +69,10 @@
                     addCssClass: 'add-row btn btn-primary',
                     deleteCssClass: 'delete-row btn btn-danger',
                     added: function (row) {
-                        row.find('input[name*="name"]').removeAttr('disabled')
+                        row.find('input[name*="name"]').removeAttr('disabled');
+                    },
+                    deleted: function (row) {
+                        row.remove();
                     }
                 });
             });
@@ -142,12 +145,14 @@
                             return;
                         }
                         document.querySelectorAll('.property_formset_row').forEach((element, index) => {
-                            let propertyName = element.querySelector('input[name$="-name"]').value;
-                            let propertyValue = element.querySelector('input[name$="-value"]').value;
+                            if (element.style.display !== 'none') {
+                                let propertyName = element.querySelector('input[name$="-name"]').value;
+                                let propertyValue = element.querySelector('input[name$="-value"]').value;
 
-                            if (propertyName && propertyValue) {
-                                form_data.append(`property-${index}-name`, propertyName);
-                                form_data.append(`property-${index}-value`, propertyValue);
+                                if (propertyName && propertyValue) {
+                                    form_data.append(`property-${index}-name`, propertyName);
+                                    form_data.append(`property-${index}-value`, propertyValue);
+                                }
                             }
                         });
 

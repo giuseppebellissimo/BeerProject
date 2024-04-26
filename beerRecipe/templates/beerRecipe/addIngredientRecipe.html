@@ -8,7 +8,7 @@
             <div class="container-fluid">
                 <form method="post" id="ingredient-form"
                       action="{% if ingredient %}
-                            {% url 'add-ingredient-recipe' recipe.id ingredient.id %}
+                            {% url 'add-ingredient-recipe' recipe.id ingredient.id_ingredient.id %}
                             {% else %}
                             {% url 'add-ingredient-recipe' recipe.id %}
                             {% endif %}">
@@ -42,11 +42,13 @@
                                 {% endfor %}
                             </tr>
                         {% endfor %}
+
                     </table>
                     <div role="group" style="margin-bottom: 10px">
                         <button class="btn btn-success" type="submit" id="saveIngredientButton"
                                 style="margin-bottom: 15px">Save Ingredient
                         </button>
+                        <input type="hidden" id="ingredient_selected" name="ingredient_selected" value="">
                         <button type="button" class="btn btn-primary" data-bs-toggle="modal"
                                 data-bs-target="#ingredientModal" style="margin-bottom: 10px; margin-left: 10px"
                                 data-url="{% url 'load-ingredient' %}">
@@ -74,10 +76,9 @@
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                <a type="button" class="btn btn-primary" id="addSelectedIngredients"
-                                   data-base-url="{% url 'add-selected-ingredients' recipe.id '999' %}">
+                                <button type="button" class="btn btn-primary" id="addSelectedIngredients">
                                     Add Selected Ingredients
-                                </a>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -102,6 +103,7 @@
             $('#div_id_name_category').hide();
             $('#div_id_name_new_category').hide();
             const loadIngredientUrl = "{% url 'load-ingredient' %}";
+            const addSelectedIngredientUrl = "{% url 'add-selected-ingredients' %}";
 
             $(document).ready(function () {
                 let name_category = $('#id_category_choices_0');
@@ -132,23 +134,27 @@
 
                 $('#saveIngredientButton').on('click', function () {
                     const form_data = new FormData();
+                    const ingredientId = $('#ingredient_selected').val() || '';
                     form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
                     form_data.append('name_ingredient', document.getElementById('id_name_ingredient').value);
                     form_data.append('name_category', document.getElementById('id_name_category').value);
                     form_data.append('name_new_category', document.getElementById('id_name_new_category').value);
                     form_data.append('quantity', document.getElementById('id_quantity').value);
                     form_data.append('measurement_unit', document.getElementById('id_measurement_unit').value);
+                    form_data.append('ingredient_selected', ingredientId);
 
                     if (document.getElementById('id_name_category').value && document.getElementById('id_name_new_category').value) {
                         alert("Both 'Name Category' and 'New Category Name' cannot be filled at the same time.");
                     }
                     document.querySelectorAll('.formset_row').forEach((element, index) => {
-                        let propertyName = element.querySelector('input[name$="-name"]').value;
-                        let propertyValue = element.querySelector('input[name$="-value"]').value;
+                        if (element.style.display !== 'none') {
+                            let propertyName = element.querySelector('input[name$="-name"]').value;
+                            let propertyValue = element.querySelector('input[name$="-value"]').value;
 
-                        if (propertyName && propertyValue) {
-                            form_data.append(`property-${index}-name`, propertyName);
-                            form_data.append(`property-${index}-value`, propertyValue);
+                            if (propertyName && propertyValue) {
+                                form_data.append(`property-${index}-name`, propertyName);
+                                form_data.append(`property-${index}-value`, propertyValue);
+                            }
                         }
                     });
                     const formIngredientActionUrl = $('#ingredient-form').attr('action');
@@ -157,7 +163,7 @@
                         url: formIngredientActionUrl,
                         data: form_data,
                         success: function (response) {
-                            document.getElementById('ingredient-form').reset();
+                            clearFormFields();
                             $('#message-content').text('Ingredient added successfully');
                             $('#message-container').removeClass('d-none alert-danger').addClass('alert-success show');
                             console.log(response)
@@ -198,17 +204,94 @@
 
                 $('#addSelectedIngredients').on('click', function () {
                     const selectedIngredientId = $('#availableIngredients input[name="ingredient"]:checked').val();
+                    $('#ingredient_selected').val(selectedIngredientId);
 
                     if (!selectedIngredientId) {
                         alert('Please select an ingredient before adding.')
                         return;
                     }
 
-                    let baseUrl = $(this).data('base-url');
-                    window.location.href = baseUrl.replace('999', selectedIngredientId) + "?hide_back_button=False";
-                    $('#ingredientModal').modal('hide');
+                    $.ajax({
+                        url: addSelectedIngredientUrl,
+                        type: 'GET',
+                        data: {
+                            'ingredient_id': selectedIngredientId,
+                        },
+                        success: function (data) {
+                            $('#id_name_ingredient').val(data.name_ingredient);
+                            $('#id_name_category').val(data.name_category);
+                            $('#id_quantity').val(data.quantity);
+                            $('#id_measurement_unit').val(data.measurement_unit);
+                            updateFormset(data);
+                            $('#ingredientModal').modal('hide');
+                        },
+                        error: function (error) {
+                            console.log(error)
+                        }
+                    });
                 });
             });
+
+            function updateFormset(data) {
+                let totalForms = $('#id_property-TOTAL_FORMS');
+                let maxForms = parseInt(totalForms.val());
+                let dataLength = data.properties.length;
+
+                if (dataLength < maxForms) {
+                    for (let i = dataLength; i < maxForms; i++) {
+                        $(`#id_property-${i}-name`).closest('tr').remove();
+                    }
+                }
+                totalForms.val(dataLength);
+
+                data.properties.forEach((property, index) => {
+                    let nameField = $(`#id_property-${index}-name`);
+                    let valueField = $(`#id_property-${index}-value`);
+
+                    if (nameField.length && valueField.length) {
+                        nameField.val(property.name).prop('disabled', false);
+                        valueField.val(property.value);
+                    } else {
+                        addForm(property,index);
+                    }
+                });
+            }
+
+            function addForm(property, index) {
+                let rowClass = (index % 2 == 0) ? 'row1' : 'row2';
+                let newRow = $(` <tr class="${rowClass} formset_row dynamic-formset1">
+                                    <td>
+                                        <input type="text" name="property-${index}-name" value="${property.name}" class="form-control form-control-sm">
+                                    </td>
+                                    <td>
+                                        <input type="number" name="property-${index}-value" value="${property.value}" class="form-control form-control-sm" step="any">
+                                    </td>
+                                    <td>
+                                        <input type="hidden" name="property-${index}-DELETE">
+                                        <a class="delete-row btn btn-danger" href="javascript:void(0)">Delete</a>
+                                    </td>
+                                </tr>`
+                );
+                $('.dynamic-formset1').closest('table').find('tbody').find('.dynamic-formset1-add').before(newRow);
+            }
+
+            function clearFormFields() {
+              $('#ingredient-form input[type="text"], #ingredient-form input[type="number"]').val('');
+              $('#ingredient-form select').prop('selectIndex', 0);
+              document.querySelectorAll('.formset_row').forEach((element) => {
+                  element.querySelectorAll('input[type="number"]').forEach((input) => {
+                      input.value = '';
+                  });
+              });
+            }
         </script>
     {% endspaceless %}
 {% endblock %}
+
+
+
+
+
+
+
+

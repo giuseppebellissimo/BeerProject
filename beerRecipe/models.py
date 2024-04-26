@@ -13,9 +13,11 @@ MEASUREMENT_CHOICES = (
     ("gr", "gr"),
     ("mg", "mg"),
     ("L", "L"),
-    ("hl", "hl"),
+    ("cl", "cl"),
     ("ml", "ml"),
-    ("SACHET", "Sachet (7 gr)")
+    ("DRY_YEASTS_11", "Dry yeasts fermentis (11 gr)"),
+    ("DRY_YEASTS_100", "Dry yeasts fermentis (100 gr)"),
+    ("DRY_YEASTS_500", "Dry yeasts fermentis (500 gr)"),
 )
 
 
@@ -90,6 +92,7 @@ class IngredientRecipe(models.Model):
     id_ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
     quantity = models.DecimalField(decimal_places=2, max_digits=10)
     measurement_unit = models.CharField(max_length=50)
+    original_unit = models.CharField(max_length=10)
 
 
 class InventoryIngredient(models.Model):
@@ -97,5 +100,5 @@ class InventoryIngredient(models.Model):
     id_inventory = models.ForeignKey(Inventory, on_delete=models.CASCADE)
     quantity = models.DecimalField(decimal_places=2, max_digits=10)
     measurement_unit = models.CharField(max_length=100)
-    expiry_date = models.DateField()
+    expiry_date = models.DateField(null=True)
     original_unit = models.CharField(max_length=10)
