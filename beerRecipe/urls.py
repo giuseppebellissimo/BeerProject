@@ -9,6 +9,8 @@ urlpatterns = [
     path('remove-recipe/<int:recipe_id>/', views.remove_recipe, name='remove-recipe'),
     path('remove-inventory/<int:inventory_id>/', views.remove_inventory, name='remove-inventory'),
     path('set-default-inventory/<int:inventory_id>/', views.set_default_inventory, name='set-default-inventory'),
+    path('check-missing-ingredients-recipe', views.check_missing_ingredients_from_recipe,
+         name='check-missing-ingredients-recipe'),
     path('add-recipe/', views.add_recipe, name='add-recipe'),
     path('add-recipe/<int:recipe_id>/', views.add_recipe, name='add-recipe'),
     path('add-ingredient-recipe/<int:recipe_id>/', views.add_ingredient_to_recipe,

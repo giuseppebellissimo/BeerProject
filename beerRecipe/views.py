@@ -134,6 +134,33 @@ def add_recipe(request, recipe_id=None):
 
 
 @login_required
+def check_missing_ingredients_from_recipe(request):
+    recipe_id = request.GET.get('recipe_id')
+    inventory = Inventory.objects.filter(id_user=request.user)
+    default_inventory = inventory.filter(is_default=True).first()
+    if not default_inventory:
+        return JsonResponse({'error': 'Default inventory not found'}, status=404)
+
+    ingredients_recipe = IngredientRecipe.objects.filter(id_recipe=recipe_id).select_related('id_ingredient')
+    missing_ingredients = []
+
+    for ingredient in ingredients_recipe:
+        inventory_ingredient = InventoryIngredient.objects.get(id_inventory=default_inventory.id,
+                                                               id_ingredient=ingredient.id_ingredient)
+        if inventory_ingredient.quantity < ingredient.quantity:
+            missing_quantity = inventory_ingredient.quantity - ingredient.quantity
+            missing_ingredients.append({
+                'name_recipe': ingredient.id_recipe.name,
+                'name_ingredient': ingredient.id_ingredient.name,
+                'recipe_quantity': ingredient.quantity,
+                'available_quantity': inventory_ingredient.quantity,
+                'missing_quantity': abs(missing_quantity),
+                'measurement_unit': ingredient.measurement_unit
+            })
+    return JsonResponse({'missing_ingredients': missing_ingredients})
+
+
+@login_required
 def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
     try:
         recipe = Recipe.objects.get(id=recipe_id)

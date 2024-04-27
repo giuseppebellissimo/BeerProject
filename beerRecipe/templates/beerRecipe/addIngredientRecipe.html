@@ -5,6 +5,13 @@
 {% block content %}
     {% spaceless %}
         {% if user.is_authenticated %}
+            <div id="message-container" class="d-none">
+                <div class="alert alert-dismissible" role="alert">
+                    <span id="message-content"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+
             <div class="container-fluid">
                 <form method="post" id="ingredient-form"
                       action="{% if ingredient %}
@@ -190,13 +197,9 @@
                                     `<input type="radio" name="ingredient" value="${ingredient.id}"> ${ingredient.name}<br>`
                                 );
                             });
-                            $('#message-content').text('Ingredient added successfully');
-                            $('#message-container').removeClass('d-none alert-danger').addClass('alert-success show');
                             console.log(response)
                         },
                         error: function (error) {
-                            $('#message-content').text('An error occurred. Please try again.');
-                            $('#message-container').removeClass('d-none alert-success').addClass('alert-danger show');
                             console.log(error);
                         }
                     });
@@ -224,8 +227,12 @@
                             $('#id_measurement_unit').val(data.measurement_unit);
                             updateFormset(data);
                             $('#ingredientModal').modal('hide');
+                            $('#message-content').text('Ingredient added successfully');
+                            $('#message-container').removeClass('d-none alert-danger').addClass('alert-success show');
                         },
                         error: function (error) {
+                            $('#message-content').text('An error occurred. Please try again.');
+                            $('#message-container').removeClass('d-none alert-success').addClass('alert-danger show');
                             console.log(error)
                         }
                     });
