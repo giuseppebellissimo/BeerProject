@@ -146,6 +146,7 @@
                         form_data.append('measurement_unit', document.getElementById('id_measurement_unit').value);
                         form_data.append('expiry_date', document.getElementById('id_expiry_date').value);
                         form_data.append('comment', document.getElementById('id_comment').value);
+                        form_data.append('producer', document.getElementById('id_producer').value);
 
                         if (document.getElementById('id_name_category').value && document.getElementById('id_name_new_category').value) {
                             appendAlert("Both 'Name Category' and 'New Category Name' cannot be filled at the same time.", 'danger');

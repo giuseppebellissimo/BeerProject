@@ -37,6 +37,7 @@ class Ingredient(models.Model):
     id_category = models.ForeignKey(Category, on_delete=models.CASCADE)
     property = YAMLField(blank=True)
     comment = models.TextField(blank=True)
+    producer = models.CharField(max_length=100, null=True)
 
     def __str__(self):
         return self.name
@@ -92,8 +93,8 @@ class IngredientRecipe(models.Model):
     id_ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
     quantity = models.DecimalField(decimal_places=2, max_digits=10)
     measurement_unit = models.CharField(max_length=50)
-    original_unit = models.CharField(max_length=10) 
-    
+    original_unit = models.CharField(max_length=10)
+
 
 class InventoryIngredient(models.Model):
     id_ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)

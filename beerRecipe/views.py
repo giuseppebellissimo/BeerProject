@@ -146,7 +146,7 @@ def check_missing_ingredients_from_recipe(request):
     missing_ingredients = []
 
     if not ingredients_recipe:
-        response={
+        response = {
             'name_recipe': name_recipe,
             'has_no_ingredients': True,
         }
@@ -185,6 +185,8 @@ def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
             initial_data = {
                 'name_ingredient': ingredient.id_ingredient.name,
                 'name_category': ingredient.id_ingredient.id_category,
+                'comment': ingredient.id_ingredient.comment,
+                'producer': ingredient.id_ingredient.producer,
                 'quantity': ingredient.quantity,
                 'measurement_unit': ingredient.measurement_unit,
             }
@@ -227,6 +229,7 @@ def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
             quantity = request.POST.get('quantity')
             measurement_unit = request.POST.get('measurement_unit')
             comment = request.POST.get('comment')
+            producer = request.POST.get('producer')
             ingredient_selected = request.POST.get('ingredient_selected')
 
             total_forms = int(request.POST.get('total_forms'))
@@ -251,7 +254,8 @@ def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
                     'name': name_ingredient,
                     'id_category': category,
                     'property': properties_yaml,
-                    'comment': comment
+                    'comment': comment,
+                    'producer': producer
                 })
 
             IngredientRecipe.objects.update_or_create(
@@ -612,10 +616,11 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
             initial_data = {
                 'name_ingredient': ingredient.id_ingredient.name,
                 'name_category': ingredient.id_ingredient.id_category,
+                'comment': ingredient.id_ingredient.comment,
+                'producer': ingredient.id_ingredient.producer,
                 'quantity': ingredient.quantity,
                 'measurement_unit': ingredient.measurement_unit,
-                'expiry_date': ingredient.expiry_date,
-                'comment': ingredient.id_ingredient.comment
+                'expiry_date': ingredient.expiry_date
             }
 
             property_data = yaml.safe_load(
@@ -657,6 +662,7 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
             measurement_unit = request.POST.get('measurement_unit')
             expiry_date = request.POST.get('expiry_date') or None
             comment = request.POST.get('comment')
+            producer = request.POST.get('producer')
 
             total_forms = int(request.POST.get('total_forms'))
             properties = get_data_formset(request, total_forms)
@@ -684,7 +690,8 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
                                                                               'name': name_ingredient,
                                                                               'id_category': category,
                                                                               'property': properties_yaml,
-                                                                              'comment': comment
+                                                                              'comment': comment,
+                                                                              'producer': producer,
                                                                           })
                 InventoryIngredient.objects.update_or_create(
                     id_inventory=inventory,

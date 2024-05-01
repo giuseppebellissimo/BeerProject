@@ -58,6 +58,7 @@ class IngredientRecipeForm(forms.ModelForm):
     name_new_category = forms.CharField(max_length=100)
     measurement_unit = forms.ChoiceField(choices=MEASUREMENT_CHOICES, required=False)
     comment = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control form-control-sm'}), required=False)
+    producer = forms.CharField(max_length=100)
 
     class Meta:
         model = IngredientRecipe
@@ -71,7 +72,8 @@ class IngredientRecipeForm(forms.ModelForm):
             'category_choices': 'Category Options',
             'name_category': 'Category',
             'name_new_category': 'New Category Name',
-            'comment': 'Comment'
+            'comment': 'Comment',
+            'producer': 'Producer'
         }
 
     def __init__(self, *args, **kwargs):
@@ -83,8 +85,8 @@ class IngredientRecipeForm(forms.ModelForm):
         self.helper.layout = Layout(
             Row(Div('name_ingredient', css_class="col-6"), Div(InlineCheckboxes('category_choices'), css_class="col-6"),
                 Div('name_category', css_class="col-6"), Div('name_new_category', css_class="col-6")),
-            Row(Div('quantity', css_class="col-3"), Div('measurement_unit', css_class="col-3"), ),
-            Row(Div('comment', css_class="col-3"), )
+            Row(Div('producer', css_class="col-3"), Div('comment', css_class="col-3"), ),
+            Row(Div('quantity', css_class="col-3"), Div('measurement_unit', css_class="col-3"), )
         )
 
 
@@ -103,6 +105,7 @@ class InventoryIngredientForm(forms.ModelForm):
     measurement_unit = forms.ChoiceField(choices=MEASUREMENT_CHOICES, required=False)
     comment = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control form-control-sm'}), required=False)
     expiry_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=False)
+    producer = forms.CharField(max_length=100)
 
     class Meta:
         model = InventoryIngredient
@@ -118,6 +121,7 @@ class InventoryIngredientForm(forms.ModelForm):
             'name_new_category': 'New Category Name',
             'category_choices': 'Category Options',
             'comment': 'Comment',
+            'producer': 'Producer'
         }
 
     def __init__(self, *args, **kwargs):
@@ -129,9 +133,9 @@ class InventoryIngredientForm(forms.ModelForm):
         self.helper.layout = Layout(
             Row(Div('name_ingredient', css_class="col-6"), Div(InlineCheckboxes('category_choices'), css_class="col-6"),
                 Div('name_category', css_class="col-6"), Div('name_new_category', css_class="col-6")),
+            Row(Div('producer', css_class="col-3"), Div('comment', css_class="col-3"), ),
             Row(Div('quantity', css_class="col-3"), Div('measurement_unit', css_class="col-3"),
-                Div('expiry_date', css_class="col-3"), ),
-            Row(Div('comment', css_class="col-3"), )
+                Div('expiry_date', css_class="col-3"), )
         )
 
 
