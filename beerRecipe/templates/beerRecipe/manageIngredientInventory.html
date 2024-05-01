@@ -5,12 +5,7 @@
 {% block content %}
     {% spaceless %}
         {% if user.is_authenticated %}
-            <div id="message-container" class="d-none">
-                <div class="alert alert-dismissible" role="alert">
-                    <span id="message-content"></span>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            </div>
+            <div id="liveAlertPlaceholder"></div>
 
             <div class="container-fluid">
                 <form method="post" id="inventory-ingredient-form"
@@ -52,7 +47,8 @@
                     </table>
                     <div role="group" style="margin-bottom: 10px">
                         <button class="btn btn-success" type="submit" id="saveButton">Save</button>
-                        <a class="btn btn-link" type="button" href="{% url 'list_ingredient' inventory.id %}">Back</a>
+                        <a class="btn btn-secondary" type="button" href="{% url 'list_ingredient' inventory.id %}"
+                           style="margin-left: 5px">Back</a>
                     </div>
                 </form>
             </div>
@@ -106,6 +102,18 @@
                     trigger: 'focus'
                 });
 
+                const alertPlaceholder = document.getElementById('liveAlertPlaceholder');
+                const appendAlert = (message, type) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = [
+                        `<div class="alert alert-${type} alert-dismissible" role="alert">`,
+                        `   <div>${message}</div>`,
+                        '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+                        '</div>'
+                    ].join('');
+
+                    alertPlaceholder.append(wrapper)
+                }
 
                 $('#saveButton').click(function (event) {
                     let allFilled = true;
@@ -124,11 +132,10 @@
                     });
 
                     if (!allFilled) {
-                        $('#message-content').text('Please fill in all fields before saving ingredient.');
-                        $('#message-container').removeClass('d-none alert-success').addClass('alert-danger show');
-
                         event.preventDefault();
+                        appendAlert('Please fill in all fields before saving ingredient.', 'danger');
                     } else {
+                        event.preventDefault();
                         const form_data = new FormData();
 
                         form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
@@ -141,7 +148,7 @@
                         form_data.append('comment', document.getElementById('id_comment').value);
 
                         if (document.getElementById('id_name_category').value && document.getElementById('id_name_new_category').value) {
-                            alert("Both 'Name Category' and 'New Category Name' cannot be filled at the same time.");
+                            appendAlert("Both 'Name Category' and 'New Category Name' cannot be filled at the same time.", 'danger');
                             return;
                         }
                         document.querySelectorAll('.property_formset_row').forEach((element, index) => {
@@ -155,31 +162,37 @@
                                 }
                             }
                         });
+                        form_data.append('total_forms', document.getElementById('id_property-TOTAL_FORMS').value);
+
 
                         $.ajax({
                             type: 'POST',
                             url: event.target.action,
                             data: form_data,
                             success: function (response) {
-                                document.getElementById('inventory-ingredient-form').reset();
-                                $('#message-content').text('Ingredient added or update successfully');
-                                $('#message-container').removeClass('d-none alert-danger').addClass('alert-success show');
-
+                                clearFormFields();
+                                appendAlert('Inventory added or update successfully', 'success');
                                 console.log(response)
                             },
                             error: function (error) {
-                                $('#message-content').text('An error occurred. Please try again.');
-                                $('#message-container').removeClass('d-none alert-success').addClass('alert-danger show');
-
+                                appendAlert('An error occurred. Please try again.', 'danger');
                                 console.log(error);
                             },
                             contentType: false,
                             processData: false,
                         });
-
-                        event.preventDefault();
                     }
                 });
+
+                function clearFormFields() {
+                    $('#inventory-ingredient-form input[type="text"], #inventory-ingredient-form input[type="number"], #inventory-ingredient-form input[type="date"]').val('');
+                    $('#inventory-ingredient-form').prop('selectIndex', 0);
+                    document.querySelectorAll('.property_formset_row').forEach((element) => {
+                        element.querySelectorAll('input[type="number"]').forEach((input) => {
+                            input.value = '';
+                        });
+                    });
+                }
             });
 
         </script>

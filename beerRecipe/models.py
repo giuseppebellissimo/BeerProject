@@ -92,8 +92,8 @@ class IngredientRecipe(models.Model):
     id_ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
     quantity = models.DecimalField(decimal_places=2, max_digits=10)
     measurement_unit = models.CharField(max_length=50)
-    original_unit = models.CharField(max_length=10)
-
+    original_unit = models.CharField(max_length=10) 
+    
 
 class InventoryIngredient(models.Model):
     id_ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)

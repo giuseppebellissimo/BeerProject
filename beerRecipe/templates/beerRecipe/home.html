@@ -81,13 +81,13 @@
             </div>
 
             <!-- Modal for confirm delete-->
-            <div class="modal" tabindex="-1" id="confirmDelete" role="dialog">
+            <div class="modal" tabindex="-1" id="confirmDelete" role="dialog"
+                    aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Confirm Delete</h5>
+                            <h5 class="modal-title" id="confirmDeleteModalLabel">Confirm Delete</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            <span aria-hidden="true">&times;</span>
                         </div>
                         <div class="modal-body">
                             <p>Are you sure you want to delete?</p>
@@ -159,11 +159,12 @@
 
                     $('#showRecipeDetailsButton').on('click', function () {
                         let recipeCheckboxes = document.querySelectorAll('input[name="recipeCheckBox"]:checked')
-                        $('#availableRecipe').empty();
 
                         if (recipeCheckboxes.length === 0) {
+                            $('#availableRecipe').empty();
                             $('#availableRecipe').append('<p style="color: darkred;">Please select at least one recipe to view details.</p>');
                         } else {
+                            $('#availableRecipe').empty();
                             recipeCheckboxes.forEach(function (checkbox) {
                                 let recipeID = checkbox.value;
 
@@ -174,9 +175,12 @@
                                         'recipe_id': recipeID,
                                     },
                                     success: function (data) {
-                                        if (data.missing_ingredients && data.missing_ingredients.length > 0) {
+                                        if (data.has_no_ingredients) {
+                                            $('#availableRecipe').append(`<h3>${data.name_recipe}</h3><br>
+                                                                          <p style="color: darkorange; padding-left: 20px;">This recipe does not contain any ingredients.</p><hr>`);
+                                        } else if (data.missing_ingredients && data.missing_ingredients.length > 0) {
                                             let details = $('<div>');
-                                            details.append(`<h3>${data.missing_ingredients[0].name_recipe}</h3>`)
+                                            details.append(`<h3>${data.name_recipe}</h3>`)
                                             let list = $('<ul>');
 
                                             data.missing_ingredients.forEach(function (ingredient) {
@@ -194,7 +198,8 @@
 
                                             $('#availableRecipe').append(details);
                                         } else {
-                                            $('#availableRecipe').append('<p style="color: darkgreen">All ingredients are available!</p>');
+                                            $('#availableRecipe').append(`<h3>${data.name_recipe}</h3><br>
+                                                                          <p style="color: darkgreen; padding-left: 20px;">All ingredients are available!</p><hr>`);
                                         }
                                         console.log(data);
                                     },

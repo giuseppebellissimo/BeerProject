@@ -4,15 +4,15 @@
     {% spaceless %}
         {% if user.is_authenticated %}
             <div class="d-flex align-items-center"
-                 style="margin-top: 20px">
+                 style="margin-top: 20px; margin-left: 5px">
                 <h3>Recipe {{ recipe.name }}</h3>
-                <a class="btn btn-outline-primary rounded-pill"
+                <a class="btn btn-primary rounded-pill"
                    style="height: fit-content; margin-left: 20px;margin-bottom: 5px"
                    href="{% url 'add-recipe' recipe.id %}">
                     <i class="bi bi-pencil-square"></i>
                 </a>
             </div>
-            <ul class="list-group" style="margin-top: 20px">
+            <ul class="list-group" style="margin-top: 20px; margin-left: 5px">
                 <li class="list-group-item">
                     <strong>Litre</strong>: {{ recipe.litre }}</li>
                 <li class="list-group-item">
@@ -20,16 +20,17 @@
                 <li class="list-group-item">
                     <strong>IBU</strong>: {{ recipe.ibu }}</li>
             </ul>
+
             <div class="d-flex align-items-center"
-                 style="margin-top: 20px">
+                 style="margin-top: 20px; margin-left: 5px">
                 <h3>Ingredients</h3>
-                <a class="btn btn-outline-success rounded-pill"
+                <a class="btn btn-success rounded-pill"
                    style="height: fit-content; margin-left: 20px;margin-bottom: 5px"
                    href="{% url 'add-ingredient-recipe' recipe.id %}?hide_back_button=False&hide_navbar_ingredient=False">
                     <i class="bi bi-plus"></i>
                 </a>
             </div>
-            <table class="table table-striped" style="margin-top: 20px">
+            <table class="table table-striped" style="margin-top: 20px;">
                 <thead>
                 <tr>
                     <th scope="col">Name</th>
@@ -69,17 +70,18 @@
                 {% endfor %}
                 </tbody>
             </table>
+
             <div class="d-flex align-items-center"
-                 style="margin-top: 20px">
+                 style="margin-top: 20px; margin-left: 5px">
                 <h3>Steps</h3>
-                <a class="btn btn-outline-success rounded-pill"
+                <a class="btn btn-success rounded-pill"
                    style="height: fit-content; margin-left: 20px;margin-bottom: 5px"
                    href="{% url 'add-step-recipe' recipe.id %}?hide_back_button=False&hide_navbar_ingredient=False">
                     <i class="bi bi-plus"></i>
                 </a>
             </div>
             {% for step in steps %}
-                <div class="d-flex justify-content-between align-items-start" style="margin-bottom: 50px">
+                <div class="d-flex justify-content-between align-items-start" style="margin-bottom: 50px; margin-left: 5px">
                     <div>
                         <strong>{{ step.index }}. {{ step.name }}</strong><br>
                         <span style="display:block; margin-left: 40px;">{{ step.description }}</span>
@@ -98,18 +100,19 @@
                         </a>
                     </div>
                 </div>
+                <hr>
             {% endfor %}
 
-            <a class="btn btn-link" href="{% url 'home' %}">Back Home</a>
+            <a class="btn btn-secondary" href="{% url 'home' %}" style="margin-left: 8px; margin-bottom: 50px">Back Home</a>
 
             <!-- Modal for confirm delete-->
-            <div class="modal" tabindex="-1" id="confirmDelete" role="dialog">
+            <div class="modal" tabindex="-1" id="confirmDelete" role="dialog"
+                    aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Confirm Delete</h5>
+                            <h5 class="modal-title" id="confirmDeleteModalLabel">Confirm Delete</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            <span aria-hidden="true">&times;</span>
                         </div>
                         <div class="modal-body">
                             <p>Are you sure you want to delete?</p>

@@ -142,7 +142,15 @@ def check_missing_ingredients_from_recipe(request):
         return JsonResponse({'error': 'Default inventory not found'}, status=404)
 
     ingredients_recipe = IngredientRecipe.objects.filter(id_recipe=recipe_id).select_related('id_ingredient')
+    name_recipe = Recipe.objects.get(id=recipe_id).name
     missing_ingredients = []
+
+    if not ingredients_recipe:
+        response={
+            'name_recipe': name_recipe,
+            'has_no_ingredients': True,
+        }
+        return JsonResponse(response)
 
     for ingredient in ingredients_recipe:
         inventory_ingredient = InventoryIngredient.objects.get(id_inventory=default_inventory.id,
@@ -150,14 +158,14 @@ def check_missing_ingredients_from_recipe(request):
         if inventory_ingredient.quantity < ingredient.quantity:
             missing_quantity = inventory_ingredient.quantity - ingredient.quantity
             missing_ingredients.append({
-                'name_recipe': ingredient.id_recipe.name,
                 'name_ingredient': ingredient.id_ingredient.name,
                 'recipe_quantity': ingredient.quantity,
                 'available_quantity': inventory_ingredient.quantity,
                 'missing_quantity': abs(missing_quantity),
                 'measurement_unit': ingredient.measurement_unit
             })
-    return JsonResponse({'missing_ingredients': missing_ingredients})
+
+    return JsonResponse({'missing_ingredients': missing_ingredients, 'name_recipe': name_recipe})
 
 
 @login_required
@@ -218,8 +226,11 @@ def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
             name_new_category = request.POST.get('name_new_category')
             quantity = request.POST.get('quantity')
             measurement_unit = request.POST.get('measurement_unit')
+            comment = request.POST.get('comment')
             ingredient_selected = request.POST.get('ingredient_selected')
-            properties = get_data_formset(request)
+
+            total_forms = int(request.POST.get('total_forms'))
+            properties = get_data_formset(request, total_forms)
             properties_yaml = yaml.dump(properties)
 
             original_unit = measurement_unit
@@ -240,6 +251,7 @@ def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
                     'name': name_ingredient,
                     'id_category': category,
                     'property': properties_yaml,
+                    'comment': comment
                 })
 
             IngredientRecipe.objects.update_or_create(
@@ -385,6 +397,7 @@ def add_step_to_recipe(request, recipe_id, step_id=None):
     elif request.method == 'POST':
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             total_forms = int(request.POST.get('step-TOTAL_FORMS'))
+
             for i in range(total_forms):
                 index = request.POST.get(f'step-{i}-index')
                 name = request.POST.get(f'step-{i}-name')
@@ -555,13 +568,12 @@ def list_ingredient(request, inventory_id):
 
 
 @login_required
-def get_data_formset(request):
+def get_data_formset(request, total_forms):
     properties = {}
-    i = 0
 
-    while True:
-        name_key = f'property-{i}-name'
-        value_key = f'property-{i}-value'
+    for index in range(total_forms):
+        name_key = f'property-{index}-name'
+        value_key = f'property-{index}-value'
 
         if name_key in request.POST and value_key in request.POST:
             name = request.POST[name_key]
@@ -569,10 +581,6 @@ def get_data_formset(request):
 
             if name and value:
                 properties[name] = value
-        else:
-            break
-
-        i += 1
 
     return properties
 
@@ -647,8 +655,15 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
             name_new_category = request.POST.get('name_new_category')
             quantity = request.POST.get('quantity')
             measurement_unit = request.POST.get('measurement_unit')
-            expiry_date = request.POST.get('expiry_date')
+            expiry_date = request.POST.get('expiry_date') or None
             comment = request.POST.get('comment')
+
+            total_forms = int(request.POST.get('total_forms'))
+            properties = get_data_formset(request, total_forms)
+            properties_yaml = yaml.dump(properties)
+
+            if expiry_date == '':
+                expiry_date = None
 
             original_unit = measurement_unit
             quantity, measurement_unit = convert_measurement(request, quantity, measurement_unit)
@@ -657,9 +672,6 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
                 return JsonResponse(
                     {'error': "Both 'Name Category' and 'New Category Name' cannot be filled at the same time."},
                     status=400)
-
-            properties = get_data_formset(request)
-            properties_yaml = yaml.dump(properties)
 
             try:
                 if name_new_category:

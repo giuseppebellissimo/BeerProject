@@ -5,6 +5,8 @@
 {% block content %}
     {% spaceless %}
         {% if user.is_authenticated %}
+            <div id="liveAlertPlaceholder"></div>
+
             <form method="post" id="step-form"
                   action="{% if step %}
                             {% url 'add-step-recipe' recipe.id step.id %}
@@ -45,7 +47,8 @@
                             style="margin-bottom: 15px">Save Step
                     </button>
                     {% if not hide_button %}
-                        <a class="btn btn-link" type="button" href="{% url 'view-recipe' recipe.id %}">Back</a>
+                        <a class="btn btn-secondary" type="button" href="{% url 'view-recipe' recipe.id %}"
+                           style="margin-bottom: 15px; margin-left: 5px">Back</a>
                     {% endif %}
                 </div>
             </form>
@@ -64,7 +67,21 @@
                 });
             });
 
+            const alertPlaceholder = document.getElementById('liveAlertPlaceholder');
+            const appendAlert = (message, type) => {
+                const wrapper = document.createElement('div');
+                wrapper.innerHTML = [
+                    `<div class="alert alert-${type} alert-dismissible" role="alert">`,
+                    `   <div>${message}</div>`,
+                    '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+                    '</div>'
+                ].join('');
+
+                alertPlaceholder.append(wrapper)
+            }
+
             $('#saveStepButton').on('click', function () {
+                event.preventDefault();
                 const form_data = new FormData();
                 form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
 
@@ -85,19 +102,16 @@
                     data: form_data,
                     success: function (response) {
                         clearFormFields();
-                        $('#message-content').text('Step added successfully');
-                        $('#message-container').removeClass('d-none alert-danger').addClass('alert-success show');
+                            appendAlert('Step added successfully', 'success');
                         console.log(response);
                     },
                     error: function (error) {
-                        $('#message-content').text('An error occurred. Please try again.');
-                        $('#message-container').removeClass('d-none alert-success').addClass('alert-danger show');
+                            appendAlert('An error occurred. Please try again.', 'danger');
                         console.log(error);
                     },
                     contentType: false,
                     processData: false,
                 });
-                event.preventDefault();
             });
 
             function clearFormFields() {

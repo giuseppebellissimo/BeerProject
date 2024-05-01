@@ -57,6 +57,7 @@ class IngredientRecipeForm(forms.ModelForm):
     name_category = forms.ModelChoiceField(queryset=Category.objects.all(), empty_label='---')
     name_new_category = forms.CharField(max_length=100)
     measurement_unit = forms.ChoiceField(choices=MEASUREMENT_CHOICES, required=False)
+    comment = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control form-control-sm'}), required=False)
 
     class Meta:
         model = IngredientRecipe
@@ -70,6 +71,7 @@ class IngredientRecipeForm(forms.ModelForm):
             'category_choices': 'Category Options',
             'name_category': 'Category',
             'name_new_category': 'New Category Name',
+            'comment': 'Comment'
         }
 
     def __init__(self, *args, **kwargs):
@@ -81,7 +83,8 @@ class IngredientRecipeForm(forms.ModelForm):
         self.helper.layout = Layout(
             Row(Div('name_ingredient', css_class="col-6"), Div(InlineCheckboxes('category_choices'), css_class="col-6"),
                 Div('name_category', css_class="col-6"), Div('name_new_category', css_class="col-6")),
-            Row(Div('quantity', css_class="col-3"), Div('measurement_unit', css_class="col-3"), )
+            Row(Div('quantity', css_class="col-3"), Div('measurement_unit', css_class="col-3"), ),
+            Row(Div('comment', css_class="col-3"), )
         )
 
 
@@ -99,15 +102,12 @@ class InventoryIngredientForm(forms.ModelForm):
     name_new_category = forms.CharField(max_length=100)
     measurement_unit = forms.ChoiceField(choices=MEASUREMENT_CHOICES, required=False)
     comment = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control form-control-sm'}), required=False)
+    expiry_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=False)
 
     class Meta:
         model = InventoryIngredient
         fields = '__all__'
         exclude = ('id_ingredient', 'id_inventory', 'original_unit')
-
-        widgets = {
-            'expiry_date': forms.DateInput(attrs={'type': 'date'}, )
-        }
 
         labels = {
             'name_ingredient': 'Name Ingredient',

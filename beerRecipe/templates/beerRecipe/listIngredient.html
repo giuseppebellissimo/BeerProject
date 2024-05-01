@@ -60,17 +60,17 @@
             <div role="group" style="margin: 5px">
                 <a class="btn btn-primary" type="button" href="{% url 'manage-ingredient-inventory' inventories.id %}">Add
                     Ingredient</a>
-                <a class="btn btn-link" type="button" href="{% url 'home' %}">Back Home</a>
+                <a class="btn btn-secondary" type="button" href="{% url 'home' %}" style="margin-left: 5px">Back Home</a>
             </div>
 
             <!-- Modal for confirm delete-->
-            <div class="modal" tabindex="-1" id="confirmDelete" role="dialog">
+            <div class="modal" tabindex="-1" id="confirmDelete" role="dialog"
+                    aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Confirm Delete</h5>
+                            <h5 class="modal-title" id="confirmDeleteModalLabel">Confirm Delete</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            <span aria-hidden="true">&times;</span>
                         </div>
                         <div class="modal-body">
                             <p>Are you sure you want to delete the ingredient?</p>

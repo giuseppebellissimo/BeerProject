@@ -5,12 +5,8 @@
 {% block content %}
     {% spaceless %}
         {% if user.is_authenticated %}
-            <div id="message-container" class="d-none">
-                <div class="alert alert-dismissible" role="alert">
-                    <span id="message-content"></span>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            </div>
+            <div id="liveAlertPlaceholder"></div>
+
             <h3 style="margin-left: 12px">Recipe</h3>
             <div class="container-fluid" id="recipe-container">
                 <form id="recipe-form" method="post"
@@ -24,12 +20,13 @@
                 </form>
                 <button class="btn btn-success" type="button" id="saveRecipeButton">Save Recipe</button>
                 {% if not hide_button %}
-                    <a class="btn btn-link" href="{% url 'home' %}" style="margin-left: 5px">Back Home</a>
-                    {% else %}
-                    <a class="btn btn-link" href="{% url 'view-recipe' recipe.id %}" style="margin-left: 5px">Back</a>
+                    <a class="btn btn-secondary" href="{% url 'home' %}" style="margin-left: 5px;">Back Home</a>
+                {% else %}
+                    <a class="btn btn-secondary" href="{% url 'view-recipe' recipe.id %}"
+                       style="margin-left: 5px">Back</a>
                 {% endif %}
             </div>
-            <div class="container-fluid d-none" id="action-buttons">
+            <div class="container-fluid d-none" id="action-buttons" style="padding-top: 10px">
                 <button type="button" id="addIngredientButton" class="btn btn-primary"
                         data-url-template="{% url 'add-ingredient-recipe' 0 %}">
                     Add Ingredient
@@ -54,8 +51,21 @@
         <script type="text/javascript">
             let globalRecipeId = null;
             $(document).ready(function () {
+                const alertPlaceholder = document.getElementById('liveAlertPlaceholder');
+                const appendAlert = (message, type) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = [
+                        `<div class="alert alert-${type} alert-dismissible" role="alert">`,
+                        `   <div>${message}</div>`,
+                        '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+                        '</div>'
+                    ].join('');
+
+                    alertPlaceholder.append(wrapper)
+                }
 
                 $('#saveRecipeButton').on('click', function () {
+                    event.preventDefault();
                     const form_data = new FormData();
 
                     form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
@@ -74,22 +84,20 @@
                                 $('#action-buttons').removeClass('d-none');
                                 globalRecipeId = response.recipe_id;
                             }
-                            $('#message-content').text('Recipe added successfully');
-                            $('#message-container').removeClass('d-none alert-danger').addClass('alert-success show');
+                            appendAlert('Recipe added successfully', 'success');
                             console.log(response)
                         },
                         error: function (error) {
-                            $('#message-content').text('An error occurred. Please try again.');
-                            $('#message-container').removeClass('d-none alert-success').addClass('alert-danger show');
+                            appendAlert('An error occurred. Please try again.', 'danger');
                             console.log(error);
                         },
                         contentType: false,
                         processData: false,
                     });
-                    event.preventDefault();
                 });
 
                 $('#updateRecipeButton').on('click', function () {
+                    event.preventDefault();
                     const form_data = new FormData(document.getElementById('recipe-form'));
                     form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
                     const baseUrl = $(this).data('base-url');
@@ -100,19 +108,16 @@
                         url: url,
                         data: form_data,
                         success: function (response) {
-                            $('#message-content').text('Recipe update successfully');
-                            $('#message-container').removeClass('d-none alert-danger').addClass('alert-success show');
+                            appendAlert('Ingredient update successfully', 'success');
                             console.log(response)
                         },
                         error: function (error) {
-                            $('#message-content').text('An error occurred. Please try again.');
-                            $('#message-container').removeClass('d-none alert-success').addClass('alert-danger show');
+                            appendAlert('An error occurred. Please try again.', 'danger');
                             console.log(error);
                         },
                         contentType: false,
                         processData: false,
                     });
-                    event.preventDefault();
                 });
 
                 $('#addIngredientButton').on('click', function () {

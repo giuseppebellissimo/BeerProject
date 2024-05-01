@@ -5,12 +5,7 @@
 {% block content %}
     {% spaceless %}
         {% if user.is_authenticated %}
-            <div id="message-container" class="d-none">
-                <div class="alert alert-dismissible" role="alert">
-                    <span id="message-content"></span>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            </div>
+            <div id="liveAlertPlaceholder"></div>
 
             <div class="container-fluid">
                 <form method="post" id="ingredient-form"
@@ -57,12 +52,13 @@
                         </button>
                         <input type="hidden" id="ingredient_selected" name="ingredient_selected" value="">
                         <button type="button" class="btn btn-primary" data-bs-toggle="modal"
-                                data-bs-target="#ingredientModal" style="margin-bottom: 10px; margin-left: 10px"
+                                data-bs-target="#ingredientModal" style="margin-bottom: 15px; margin-left: 10px"
                                 data-url="{% url 'load-ingredient' %}">
                             Load ingredient from {{ default_inventory.name }}
                         </button>
                         {% if not hide_button %}
-                            <a class="btn btn-link" type="button" href="{% url 'view-recipe' recipe.id %}">Back</a>
+                            <a class="btn btn-secondary" type="button" href="{% url 'view-recipe' recipe.id %}"
+                               style="margin-bottom: 15px; margin-left: 10px">Back</a>
                         {% endif %}
                     </div>
                 </form>
@@ -139,15 +135,31 @@
                     trigger: 'focus'
                 });
 
+                const alertPlaceholder = document.getElementById('liveAlertPlaceholder');
+                const appendAlert = (message, type) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = [
+                         `<div class="alert alert-${type} alert-dismissible" role="alert">`,
+                         `   <div>${message}</div>`,
+                         '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+                         '</div>'
+                    ].join('');
+
+                    alertPlaceholder.append(wrapper)
+                }
+
                 $('#saveIngredientButton').on('click', function () {
+                    event.preventDefault();
                     const form_data = new FormData();
                     const ingredientId = $('#ingredient_selected').val() || '';
+
                     form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
                     form_data.append('name_ingredient', document.getElementById('id_name_ingredient').value);
                     form_data.append('name_category', document.getElementById('id_name_category').value);
                     form_data.append('name_new_category', document.getElementById('id_name_new_category').value);
                     form_data.append('quantity', document.getElementById('id_quantity').value);
                     form_data.append('measurement_unit', document.getElementById('id_measurement_unit').value);
+                    form_data.append('comment', document.getElementById('id_comment').value);
                     form_data.append('ingredient_selected', ingredientId);
 
                     if (document.getElementById('id_name_category').value && document.getElementById('id_name_new_category').value) {
@@ -164,6 +176,8 @@
                             }
                         }
                     });
+                    form_data.append('total_forms', document.getElementById('id_property-TOTAL_FORMS').value);
+
                     const formIngredientActionUrl = $('#ingredient-form').attr('action');
                     $.ajax({
                         type: 'POST',
@@ -171,19 +185,16 @@
                         data: form_data,
                         success: function (response) {
                             clearFormFields();
-                            $('#message-content').text('Ingredient added successfully');
-                            $('#message-container').removeClass('d-none alert-danger').addClass('alert-success show');
+                            appendAlert('Ingredient added successfully', 'success');
                             console.log(response)
                         },
                         error: function (error) {
-                            $('#message-content').text('An error occurred. Please try again.');
-                            $('#message-container').removeClass('d-none alert-success').addClass('alert-danger show');
+                            appendAlert('An error occurred. Please try again.', 'danger');
                             console.log(error);
                         },
                         contentType: false,
                         processData: false,
                     });
-                    event.preventDefault();
                 });
 
                 $('#ingredientModal').on('show.bs.modal', function () {
@@ -227,12 +238,10 @@
                             $('#id_measurement_unit').val(data.measurement_unit);
                             updateFormset(data);
                             $('#ingredientModal').modal('hide');
-                            $('#message-content').text('Ingredient added successfully');
-                            $('#message-container').removeClass('d-none alert-danger').addClass('alert-success show');
+                            appendAlert('Ingredient loaded successfully', 'success');
                         },
                         error: function (error) {
-                            $('#message-content').text('An error occurred. Please try again.');
-                            $('#message-container').removeClass('d-none alert-success').addClass('alert-danger show');
+                            appendAlert('Error. Ingredient loading failed', 'danger');
                             console.log(error)
                         }
                     });
@@ -259,7 +268,7 @@
                         nameField.val(property.name).prop('disabled', false);
                         valueField.val(property.value);
                     } else {
-                        addForm(property,index);
+                        addForm(property, index);
                     }
                 });
             }
@@ -283,22 +292,14 @@
             }
 
             function clearFormFields() {
-              $('#ingredient-form input[type="text"], #ingredient-form input[type="number"]').val('');
-              $('#ingredient-form select').prop('selectIndex', 0);
-              document.querySelectorAll('.formset_row').forEach((element) => {
-                  element.querySelectorAll('input[type="number"]').forEach((input) => {
-                      input.value = '';
-                  });
-              });
+                $('#ingredient-form input[type="text"], #ingredient-form input[type="number"]').val('');
+                $('#ingredient-form select').prop('selectIndex', 0);
+                document.querySelectorAll('.formset_row').forEach((element) => {
+                    element.querySelectorAll('input[type="number"]').forEach((input) => {
+                        input.value = '';
+                    });
+                });
             }
         </script>
     {% endspaceless %}
 {% endblock %}
-
-
-
-
-
-
-
-
