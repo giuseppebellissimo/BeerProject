@@ -176,6 +176,7 @@ def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
         return HttpResponseNotFound()
     hide_button = request.GET.get('hide_back_button', 'true') == 'true'
     hide_navbar = request.GET.get('hide_navbar_ingredient', 'true') == 'true'
+    core_only = request.GET.get('core_only', 'false') == 'true'
     inventory = Inventory.objects.filter(id_user=request.user)
     default_inventory = inventory.filter(is_default=True).first()
 
@@ -219,7 +220,11 @@ def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
             'hide_navbar': hide_navbar,
             'hide_button': hide_button
         }
-        return render(request, 'beerRecipe/addIngredientRecipe.html', context)
+        if core_only:
+            template_name = 'beerRecipe/coreIngredientRecipe.html'
+        else:
+            template_name = 'beerRecipe/addIngredientRecipe.html'
+        return render(request, template_name, context)
 
     elif request.method == 'POST':
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -376,6 +381,7 @@ def add_step_to_recipe(request, recipe_id, step_id=None):
         return HttpResponseNotFound()
     hide_button = request.GET.get('hide_back_button', 'true') == 'true'
     hide_navbar = request.GET.get('hide_navbar_ingredient', 'true') == 'true'
+    core_only = request.GET.get('core_only', 'false') == 'true'
     if step_id:
         try:
             step = Step.objects.get(id=step_id)
@@ -397,7 +403,12 @@ def add_step_to_recipe(request, recipe_id, step_id=None):
             'hide_navbar': hide_navbar,
             'hide_button': hide_button
         }
-        return render(request, 'beerRecipe/addStepRecipe.html', context)
+        if core_only:
+            template_name = 'beerRecipe/coreStepRecipe.html'
+        else:
+            template_name = 'beerRecipe/addStepRecipe.html'
+        return render(request, template_name, context)
+
     elif request.method == 'POST':
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             total_forms = int(request.POST.get('step-TOTAL_FORMS'))
@@ -454,7 +465,7 @@ def remove_ingredient_form_recipe(request, ingredient_id):
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
-    ingredient.delete()
+    # ingredient.delete()
     ingredient_recipe.delete()
     return redirect('view-recipe', recipe)
 

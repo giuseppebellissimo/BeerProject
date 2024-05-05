@@ -28,11 +28,11 @@
             </div>
             <div class="container-fluid d-none" id="action-buttons" style="padding-top: 10px">
                 <button type="button" id="addIngredientButton" class="btn btn-primary"
-                        data-url-template="{% url 'add-ingredient-recipe' 0 %}">
+                        data-url-template="{% url 'add-ingredient-recipe' 0 %}?core_only=true">
                     Add Ingredient
                 </button>
                 <button type="button" id="addStepButton" class="btn btn-primary"
-                        data-url-template="{% url 'add-step-recipe' 0 %}"
+                        data-url-template="{% url 'add-step-recipe' 0 %}?core_only=true"
                         style="margin-left: 5px">
                     Add Step
                 </button>
@@ -120,18 +120,20 @@
                     });
                 });
 
-                $('#addIngredientButton').on('click', function () {
+                $('#addIngredientButton').on('click', function (event) {
 
                     if (globalRecipeId) {
+                        event.preventDefault();
                         let url = $(this).data('url-template').replace('0', globalRecipeId);
                         $('#addIngredientButton').hide();
                         $('#ingredient-container').load(url);
                     }
                 });
 
-                $('#addStepButton').on('click', function () {
+                $('#addStepButton').on('click', function (event) {
 
                     if (globalRecipeId) {
+                        event.preventDefault();
                         let url = $(this).data('url-template').replace('0', globalRecipeId);
                         $('#addStepButton').hide();
                         $('#step-container').load(url);
