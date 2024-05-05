@@ -253,15 +253,18 @@ def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
             else:
                 category = Category.objects.get(id=name_category)
 
-            ingredient, created = Ingredient.objects.update_or_create(
-                id=ingredient_id,
-                defaults={
-                    'name': name_ingredient,
-                    'id_category': category,
-                    'property': properties_yaml,
-                    'comment': comment,
-                    'producer': producer
-                })
+            if ingredient_selected:
+                ingredient = Ingredient.objects.get(id=ingredient_selected)
+            else:
+                ingredient, created = Ingredient.objects.update_or_create(
+                    id=ingredient_id,
+                    defaults={
+                        'name': name_ingredient,
+                        'id_category': category,
+                        'property': properties_yaml,
+                        'comment': comment,
+                        'producer': producer
+                    })
 
             IngredientRecipe.objects.update_or_create(
                 id_recipe=recipe,
@@ -459,13 +462,11 @@ def view_recipes(request, recipe_id):
 @login_required
 def remove_ingredient_form_recipe(request, ingredient_id):
     try:
-        ingredient = Ingredient.objects.get(id=ingredient_id)
         ingredient_recipe = IngredientRecipe.objects.get(id_ingredient=ingredient_id)
         recipe = ingredient_recipe.id_recipe.id
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
-    # ingredient.delete()
     ingredient_recipe.delete()
     return redirect('view-recipe', recipe)
 
