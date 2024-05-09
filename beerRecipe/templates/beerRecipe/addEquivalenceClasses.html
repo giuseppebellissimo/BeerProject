@@ -1,0 +1,62 @@
+{% extends 'beerRecipe/baseHome.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    {% spaceless %}
+        {% if user.is_authenticated %}
+            <div id="liveAlertPlaceholder"></div>
+
+            <h3 style="margin-left: 12px">Equivalence Classes of Ingredients</h3>
+            <div class="container-fluid" id="equivalence-classes-container">
+                <form id="equivalence-classes-form" method="post" action="{% url 'add-equivalent-classes' %}">
+                    {% csrf_token %}
+                    {% crispy form %}
+                </form>
+                <button class="btn btn-success" id="saveEquivalentClasses">Save Equivalent Classes</button>
+                <a class="btn btn-secondary" href="{% url 'equivalent-ingredients' %}" style="margin-left: 5px">Back</a>
+            </div>
+        {% endif %}
+
+        <script type="text/javascript">
+            $(document).ready(function () {
+                const alertPlaceholder = document.getElementById('liveAlertPlaceholder');
+                const appendAlert = (message, type) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = [
+                        `<div class="alert alert-${type} alert-dismissible" role="alert">`,
+                        `   <div>${message}</div>`,
+                        '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+                        '</div>'
+                    ].join('');
+
+                    alertPlaceholder.append(wrapper)
+                }
+
+                $('#saveEquivalentClasses').on('click', function () {
+                    event.preventDefault();
+                    const form_data = new FormData();
+
+                    form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
+                    form_data.append('name', document.getElementById('id_name').value);
+                    form_data.append('description', document.getElementById('id_description').value);
+
+                    $.ajax({
+                        type: 'POST',
+                        url: event.target.action,
+                        data: form_data,
+                        success: function (response) {
+                            appendAlert('Equivalence Classe of Ingredients added successfully', 'success');
+                            console.log(response);
+                        },
+                        error: function (error) {
+                            appendAlert('An error occurred. Please try again.', 'danger');
+                            console.log(error);
+                        },
+                        contentType: false,
+                        processData: false,
+                    });
+                });
+            })
+        </script>
+    {% endspaceless %}
+{% endblock %}

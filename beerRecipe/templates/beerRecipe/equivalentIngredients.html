@@ -1,0 +1,158 @@
+{% extends 'beerRecipe/baseHome.html' %}
+
+{% block head %}
+    <style>
+        .draggable {
+            cursor: move;
+        }
+
+        .dropzone {
+            min-height: 50px;
+            background-color: #f8f9fa;
+            border: dashed 2px #6c757d;
+        }
+
+        .list-group-item {
+            user-select: none; /* Prevent selection on drag */
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    {% spaceless %}
+        {% if user.is_authenticated %}
+            <div id="liveAlertPlaceholder"></div>
+
+            <div class="container-fluid" style="margin-top: 10px">
+                <div class="row">
+
+                    <!--Ingredient list-->
+                    <div class="col-sm-6 mb-3 mb-sm-0">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Ingredients List</h5>
+                                <h6 class="card-subtitle mb-2 text-body-secondary">Drag ingredients into equivalence
+                                    classes to categorize them.</h6>
+                                <div id="ingredientList">
+                                    <ul class="list-group">
+                                        {% for ingredient in ingredients %}
+                                            <li class="list-group-item draggable" draggable="true"
+                                                id="ingredient-{{ ingredient.id }}"
+                                                ondragstart="handleDragStart(event)">{{ ingredient.name }}</li>
+                                        {% empty %}
+                                            <li class="list-group-item">No ingredients found. Add new ingredient from
+                                                inventory...
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!--Equivalent class list-->
+                    <div class="col-sm-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Equivalence Classes of Ingredients</h5>
+                                <h6 class="card-subtitle mb-2 text-body-secondary">Expand to see or edit the ingredients
+                                    in each class.</h6>
+                                <div class="accordion accordion-flush" id="accordionEquivalentClasses">
+                                    {% for equivalent_class in equivalent_classes %}
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header">
+                                                <button class="accordion-button collapsed" type="button"
+                                                        data-bs-toggle="collapse"
+                                                        data-bs-target="#flush-collapse{{ equivalent_class.id }}"
+                                                        aria-expanded="false"
+                                                        aria-controls="flush-collapse{{ equivalent_class.id }}">
+                                                    <strong>{{ equivalent_class.name }}</strong>
+                                                </button>
+                                            </h2>
+                                            <div id="flush-collapse{{ equivalent_class.id }}"
+                                                 class="accordion-collapse collapse"
+                                                 data-bs-parent="#accordionEquivalentClasses">
+                                                <div class="accordion-body dropzone"
+                                                     ondrop="dropIngredient(event, {{ equivalent_class.id }})"
+                                                     ondragover="allowDrop(event)">
+                                                    <h6>Ingredients</h6>
+                                                    <ul class="list-group"
+                                                        id="ingredients-list-{{ equivalent_class.id }}">
+                                                        {% for ingredient in equivalent_class.ingredients.all %}
+                                                            <li class="list-group-item"
+                                                                id="ingredient-{{ ingredient.id }}">{{ ingredient.name }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% empty %}
+                                        <p>No equivalence classes of ingredients found. Add new equivalence
+                                            classes...</p>
+                                    {% endfor %}
+                                </div>
+                                <a href="{% url 'add-equivalent-classes' %}" class="btn btn-primary"
+                                   style="margin-top: 10px">Create Class</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <script type="text/javascript">
+            $(document).ready(function () {
+                const alertPlaceholder = document.getElementById('liveAlertPlaceholder');
+                const appendAlert = (message, type) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = [
+                        `<div class="alert alert-${type} alert-dismissible" role="alert">`,
+                        `   <div>${message}</div>`,
+                        '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+                        '</div>'
+                    ].join('');
+
+                    alertPlaceholder.append(wrapper)
+                }
+            });
+
+            function handleDragStart(event) {
+                event.dataTransfer.setData("text/plain", event.target.id);
+            }
+
+            function allowDrop(event) {
+                event.preventDefault();
+            }
+
+            function dropIngredient(event, equivalentClassId) {
+                event.preventDefault();
+                const ingredientId = event.dataTransfer.getData("text").split('-')[1];
+                const ingredientElement = document.getElementById('ingredient-' + ingredientId);
+                const ingredientList = document.getElementById('ingredients-list-' + equivalentClassId);
+
+                $.ajax({
+                    type: 'POST',
+                    url: "{% url 'update-equivalent-classes' %}",
+                    data: {
+                        'ingredient_id': ingredientId,
+                        'equivalent_class_id': equivalentClassId,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            const newElement = ingredientElement.cloneNode(true);
+                            ingredientList.appendChild(newElement);
+                            appendAlert(response.success, 'success')
+                        } else {
+                            appendAlert(response.error, 'danger');
+                        }
+                    },
+                    error: function (error) {
+                        appendAlert('An error occurred: ' + error.status + ' ' + error.statusText, 'danger');
+                        appendAlert(error.statusText, 'danger');
+                    }
+                });
+            }
+        </script>
+    {% endspaceless %}
+{% endblock %}

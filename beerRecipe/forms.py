@@ -164,5 +164,23 @@ class StepForm(forms.ModelForm):
         }
 
 
+class EquivalenceClassesForm(forms.ModelForm):
+    class Meta:
+        model = EquivalentIngredients
+        fields = ['name', 'description']
+        labels = {
+            'name': 'Name',
+            'description': 'Description'
+        }
+
+    def __init__(self, *args, **kwargs):
+        super(EquivalenceClassesForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'POST'
+        self.helper.layout = Layout(
+            Row(Div('name', css_class="col-3"), Div('description', css_class="col-3"), )
+        )
+
+
 property_ingredient_formset = formset_factory(PropertyIngredientForm, extra=0, min_num=3, can_delete=True)
 step_formset = formset_factory(StepForm, extra=0, min_num=1, can_delete=True)

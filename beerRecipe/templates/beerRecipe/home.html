@@ -144,76 +144,76 @@
                     </div>
                 </div>
             </div>
+        {% endif %}
 
-            <script>
-                const checkMissingIngredientsRecipeUrl = "{% url 'check-missing-ingredients-recipe' %}";
+        <script type="text/javascript">
+            const checkMissingIngredientsRecipeUrl = "{% url 'check-missing-ingredients-recipe' %}";
 
-                $(document).ready(function () {
-                    $('#confirmDelete').on('show.bs.modal', function (e) {
-                        $(this).find('.btn-ok').attr('href', $(e.relatedTarget).data('href'));
-                    });
+            $(document).ready(function () {
+                $('#confirmDelete').on('show.bs.modal', function (e) {
+                    $(this).find('.btn-ok').attr('href', $(e.relatedTarget).data('href'));
+                });
 
-                    $('#showRecipeDetailsButton').on('click', function () {
-                        let recipeCheckboxes = document.querySelectorAll('input[name="recipeCheckBox"]:checked')
+                $('#showRecipeDetailsButton').on('click', function () {
+                    let recipeCheckboxes = document.querySelectorAll('input[name="recipeCheckBox"]:checked')
 
-                        if (recipeCheckboxes.length === 0) {
-                            $('#availableRecipe').empty();
-                            $('#availableRecipe').append('<p style="color: darkred;">Please select at least one recipe to view details.</p>');
-                        } else {
-                            $('#availableRecipe').empty();
-                            recipeCheckboxes.forEach(function (checkbox) {
-                                let recipeID = checkbox.value;
+                    if (recipeCheckboxes.length === 0) {
+                        $('#availableRecipe').empty();
+                        $('#availableRecipe').append('<p style="color: darkred;">Please select at least one recipe to view details.</p>');
+                    } else {
+                        $('#availableRecipe').empty();
+                        recipeCheckboxes.forEach(function (checkbox) {
+                            let recipeID = checkbox.value;
 
-                                $.ajax({
-                                    url: checkMissingIngredientsRecipeUrl,
-                                    type: 'GET',
-                                    data: {
-                                        'recipe_id': recipeID,
-                                    },
-                                    success: function (data) {
-                                        if (data.has_no_ingredients) {
-                                            $('#availableRecipe').append(`<h3>${data.name_recipe}</h3><br>
+                            $.ajax({
+                                url: checkMissingIngredientsRecipeUrl,
+                                type: 'GET',
+                                data: {
+                                    'recipe_id': recipeID,
+                                },
+                                success: function (data) {
+                                    if (data.has_no_ingredients) {
+                                        $('#availableRecipe').append(`<h3>${data.name_recipe}</h3><br>
                                                                           <p style="color: darkorange; padding-left: 20px;">This recipe does not contain any ingredients.</p><hr>`);
-                                        } else if (data.missing_ingredients && data.missing_ingredients.length > 0) {
-                                            let details = $('<div>');
-                                            details.append(`<h3>${data.name_recipe}</h3>`)
-                                            let list = $('<ul>');
+                                    } else if (data.missing_ingredients && data.missing_ingredients.length > 0) {
+                                        let details = $('<div>');
+                                        details.append(`<h3>${data.name_recipe}</h3>`)
+                                        let list = $('<ul>');
 
-                                            data.missing_ingredients.forEach(function (ingredient) {
-                                                list.append(`<li>
+                                        data.missing_ingredients.forEach(function (ingredient) {
+                                            list.append(`<li>
                                                                 <strong style="padding-left: 20px;">${ingredient.name_ingredient}</strong><br>
                                                                 <span style="padding-left: 40px;">Recipe quantity: ${ingredient.recipe_quantity} ${ingredient.measurement_unit}</span><br>
                                                                 <span style="padding-left: 40px;">Quantity available: ${ingredient.available_quantity} ${ingredient.measurement_unit}</span><br>
                                                                 <span style="padding-left: 40px; color: darkred;">Missing quantity: ${ingredient.missing_quantity} ${ingredient.measurement_unit}</span><br>
                                                             </li>`
-                                                );
-                                            });
-                                            list.append('</ul>');
-                                            details.append(list);
-                                            details.append('<hr></div>');
+                                            );
+                                        });
+                                        list.append('</ul>');
+                                        details.append(list);
+                                        details.append('<hr></div>');
 
-                                            $('#availableRecipe').append(details);
-                                        } else {
-                                            $('#availableRecipe').append(`<h3>${data.name_recipe}</h3><br>
+                                        $('#availableRecipe').append(details);
+                                    } else {
+                                        $('#availableRecipe').append(`<h3>${data.name_recipe}</h3><br>
                                                                           <p style="color: darkgreen; padding-left: 20px;">All ingredients are available!</p><hr>`);
-                                        }
-                                        console.log(data);
-                                    },
-                                    error: function (error) {
-                                        console.log(error);
                                     }
-                                });
+                                    console.log(data);
+                                },
+                                error: function (error) {
+                                    console.log(error);
+                                }
                             });
-                        }
-                    });
+                        });
+                    }
                 });
+            });
 
-                function setDefaultInventory() {
-                    let selectedInventory = document.querySelector('input[name="defaultInventory"]:checked').value;
-                    let baseUrl = "{% url 'set-default-inventory' 0 %}";
-                    window.location.href = baseUrl.replace('0', selectedInventory);
-                }
-            </script>
-        {% endif %}
+            function setDefaultInventory() {
+                let selectedInventory = document.querySelector('input[name="defaultInventory"]:checked').value;
+                let baseUrl = "{% url 'set-default-inventory' 0 %}";
+                window.location.href = baseUrl.replace('0', selectedInventory);
+            }
+        </script>
     {% endspaceless %}
 {% endblock %}

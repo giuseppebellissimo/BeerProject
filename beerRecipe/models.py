@@ -103,3 +103,10 @@ class InventoryIngredient(models.Model):
     measurement_unit = models.CharField(max_length=100)
     expiry_date = models.DateField(null=True)
     original_unit = models.CharField(max_length=10)
+
+
+class EquivalentIngredients(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.CharField(max_length=200)
+    ingredients = models.ManyToManyField(Ingredient)
+    user = models.ManyToManyField(User)

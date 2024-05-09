@@ -26,7 +26,8 @@
                             <a class="dropdown-item" href="#" data-bs-toggle="modal"
                                data-bs-target="#defaultInventoryModal">
                                 Default Inventory</a>
-                            <a class="dropdown-item" href="#">Equivalent Ingredients</a>
+                            <a class="dropdown-item" href="{% url 'equivalent-ingredients' %}">Equivalent
+                                Ingredients</a>
                             <a class="dropdown-item" href="{% url 'logout_user' %}">Logout</a>
                         </div>
                     {% else %}

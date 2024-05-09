@@ -3,9 +3,10 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
+from django.db import IntegrityError
 from django.http import JsonResponse, HttpResponseNotAllowed, HttpResponseNotFound
 from django.shortcuts import render, redirect
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 
 from .forms import *
 from .models import *
@@ -81,6 +82,67 @@ def set_default_inventory(request, inventory_id):
     except Inventory.DoesNotExist:
         return HttpResponseNotFound("Inventory does not exist")
     return redirect('home')
+
+
+@login_required
+def equivalent_ingredients(request):
+    inventory = Inventory.objects.filter(id_user=request.user)
+    ingredients = Ingredient.objects.filter(inventory__in=inventory)
+    equivalent_classes = EquivalentIngredients.objects.filter(user=request.user)
+    context = {
+        'ingredients': ingredients,
+        'equivalent_classes': equivalent_classes
+    }
+    return render(request, 'beerRecipe/equivalentIngredients.html', context)
+
+
+@login_required
+def add_equivalence_classes_of_ingredients(request):
+    if request.method == 'GET':
+        form = EquivalenceClassesForm()
+        context = {'form': form}
+        return render(request, 'beerRecipe/addEquivalenceClasses.html', context)
+    elif request.method == 'POST':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            name = request.POST.get('name')
+            description = request.POST.get('description')
+            try:
+                equivalent = EquivalentIngredients.objects.create(name=name, description=description)
+                equivalent.save()
+                equivalent.user.add(request.user)
+            except IntegrityError:
+                return JsonResponse({'error': 'Integrity error while adding an equivalent ingredient'}, status=400)
+            except ValidationError as e:
+                return JsonResponse({'error': f'Validation error: {e.message}'}, status=400)
+            except Exception as e:
+                return JsonResponse({'error': f'Unexpected error: {str(e)}'}, status=500)
+            return JsonResponse({'success': 'Recipe saved successfully'})
+        else:
+            return JsonResponse({'error': 'Invalid AJAX request'}, status=500)
+    else:
+        return HttpResponseNotAllowed(['GET', 'POST'])
+
+
+@login_required
+def update_equivalence_classes_of_ingredients(request):
+    if request.method == 'POST':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            ingredient_id = request.POST.get('ingredient_id')
+            equivalent_class_id = request.POST.get('equivalent_class_id')
+
+            try:
+                ingredient = Ingredient.objects.get(id=ingredient_id)
+                equivalent_class = EquivalentIngredients.objects.get(id=equivalent_class_id)
+                equivalent_class.ingredients.add(ingredient)
+                equivalent_class.save()
+                return JsonResponse({'success': 'Ingredient added successfully'})
+            except Ingredient.DoesNotExist:
+                return JsonResponse({'error': 'Ingredient does not exist'}, status=404)
+            except EquivalentIngredients.DoesNotExist:
+                return JsonResponse({'error': 'Equivalent class does not exist'}, status=404)
+            except IntegrityError as e:
+                return JsonResponse({'error': str(e)}, status=400)
+    return HttpResponseNotAllowed(['POST'])
 
 
 @login_required
