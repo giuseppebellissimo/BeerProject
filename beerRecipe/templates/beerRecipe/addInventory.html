@@ -1,18 +1,66 @@
 {% extends 'beerRecipe/baseHome.html' %}
-{% load crispy_forms_filters %}
+{% load crispy_forms_tags %}
 
 {% block content %}
-    <div class="container" style="margin: 10px; padding: 10px">
-        <form method="post"
-              action=" {% if inventory %}
+    {% spaceless %}
+        {% if user.is_authenticated %}
+            <div id="liveAlertPlaceholder"></div>
+
+            <h3 style="margin-left: 12px">Inventory</h3>
+            <div class="container-fluid" id="inventory-container">
+                <form method="post" id="inventory-form"
+                      action=" {% if inventory %}
                        {% url 'add-inventory' inventory.id %}
                        {% else %}
                        {% url 'add-inventory' %}
                        {% endif %}">
-            {% csrf_token %}
-            {{ inventory_form|crispy }}
-            <button type="submit" class="btn btn-primary">Save</button>
-            <a class="btn btn-secondary" href="{% url 'home' %}">Cancel</a>
-        </form>
-    </div>
+                    {% csrf_token %}
+                    {% crispy inventory_form %}
+                    <button class="btn btn-success" id="saveInventory">Save</button>
+                    <a class="btn btn-secondary" href="{% url 'home' %}" style="margin-left: 5px">Back</a>
+                </form>
+            </div>
+        {% endif %}
+
+        <script type="text/javascript">
+            $(document).ready(function () {
+                const alertPlaceholder = document.getElementById('liveAlertPlaceholder');
+                const appendAlert = (message, type) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = [
+                        `<div class="alert alert-${type} alert-dismissible" role="alert">`,
+                        `   <div>${message}</div>`,
+                        '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+                        '</div>'
+                    ].join('');
+
+                    alertPlaceholder.append(wrapper)
+                }
+
+                $('#saveInventory').on('click', function (event) {
+                    event.preventDefault();
+
+                    const form_data = new FormData();
+                    form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
+                    form_data.append('name', document.getElementById('id_name').value);
+
+                    $.ajax({
+                        type: 'POST',
+                        data: form_data,
+                        url: event.target.action,
+                        success: function (response) {
+                            appendAlert(response.success, 'success');
+                            console.log(response);
+                        },
+                        error: function (error) {
+                            appendAlert(error.error, 'danger');
+                            console.log(error);
+                        },
+                        contentType: false,
+                        processData: false,
+                    });
+                })
+            });
+        </script>
+    {% endspaceless %}
 {% endblock %}

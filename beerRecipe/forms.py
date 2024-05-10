@@ -94,6 +94,17 @@ class AddInventoryForm(forms.ModelForm):
     class Meta:
         model = Inventory
         fields = ['name']
+        labels = {
+            'name': 'Name'
+        }
+
+    def __init__(self, *args, **kwargs):
+        super(AddInventoryForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'POST'
+        self.helper.layout = Layout(
+            Row(Div('name', css_class="col-3"))
+        )
 
 
 class InventoryIngredientForm(forms.ModelForm):

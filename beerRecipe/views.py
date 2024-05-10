@@ -717,19 +717,27 @@ def add_inventory(request, inventory_id=None):
             'inventory': inventory
         }
         return render(request, 'beerRecipe/addInventory.html', context)
-
-    if request.method == 'POST':
-        inventory_form = AddInventoryForm(request.POST, instance=inventory)
-        if inventory_form.is_valid():
-            new_inventory = inventory_form.save(commit=False)
-            if not inventory_id:
-                new_inventory.save()
-                new_inventory.id_user.set([request.user])
-            else:
-                new_inventory.save()
-            return redirect('home')
-        else:
-            return render(request, 'beerRecipe/addInventory.html', {'error': inventory_form.errors})
+    elif request.method == 'POST':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            name = request.POST.get('name')
+            try:
+                inventory, created = Inventory.objects.update_or_create(
+                    id=inventory_id,
+                    defaults={
+                        'name': name
+                    }
+                )
+                inventory.save()
+                inventory.id_user.add(request.user)
+                return JsonResponse({'success': 'Inventory saved successfully'})
+            except Inventory.DoesNotExist:
+                return JsonResponse({'error': 'Inventory does not exists'}, status=404)
+            except IntegrityError:
+                return JsonResponse({'error': 'Integrity error while adding an inventory'}, status=400)
+            except ValidationError as e:
+                return JsonResponse({'error': str(e)}, status=400)
+    else:
+        return HttpResponseNotAllowed(['GET', 'POST'])
 
 
 @login_required
