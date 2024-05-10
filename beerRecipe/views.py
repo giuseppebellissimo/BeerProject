@@ -6,7 +6,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.db import IntegrityError
 from django.http import JsonResponse, HttpResponseNotAllowed, HttpResponseNotFound
 from django.shortcuts import render, redirect
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ValidationError
 
 from .forms import *
 from .models import *
@@ -78,9 +78,9 @@ def set_default_inventory(request, inventory_id):
         Inventory.objects.filter(id_user=request.user).update(is_default=False)
         default_inventory = Inventory.objects.get(id=inventory_id, id_user=request.user)
         default_inventory.is_default = True
-        default_inventory.save()
     except Inventory.DoesNotExist:
-        return HttpResponseNotFound("Inventory does not exist")
+        return HttpResponseNotFound({'error': 'Inventory does not exist'}, status=404)
+    default_inventory.save()
     return redirect('home')
 
 
@@ -106,7 +106,7 @@ def add_equivalence_classes_of_ingredients(request, equivalent_class_id=None):
                 'description': equivalent_class.description
             }
         except EquivalentIngredients.DoesNotExist:
-            return JsonResponse({'error': 'Equivalent class does not exist'}, status=404)
+            return HttpResponseNotFound({'error': 'Equivalent class does not exist'}, status=404)
     else:
         initial_data = {}
         equivalent_class = None
@@ -161,8 +161,11 @@ def update_equivalence_classes_of_ingredients(request):
                 return JsonResponse({'error': 'Ingredient does not exist'}, status=404)
             except EquivalentIngredients.DoesNotExist:
                 return JsonResponse({'error': 'Equivalent class does not exist'}, status=404)
-            except IntegrityError as e:
-                return JsonResponse({'error': str(e)}, status=400)
+            except IntegrityError:
+                return JsonResponse({'error': 'Integrity error while adding an equivalent ingredient'}, status=400)
+            except ValidationError as e:
+                return JsonResponse({'error': f'Validation error: {e.message}'}, status=400)
+
     return HttpResponseNotAllowed(['POST'])
 
 
@@ -177,7 +180,6 @@ def remove_ingredient_from_equivalent_classes(request):
                 equivalent_class = EquivalentIngredients.objects.get(id=equivalent_class_id)
                 equivalent_class.ingredients.remove(ingredient)
                 equivalent_class.save()
-
                 return JsonResponse({'success': 'Ingredient removed successfully'})
             except Ingredient.DoesNotExist:
                 return JsonResponse({'error': 'Ingredient does not exist.'}, status=404)
@@ -201,8 +203,8 @@ def add_recipe(request, recipe_id=None):
                 'ibu': recipe.ibu,
                 'id_user': recipe.id_user
             }
-        except ObjectDoesNotExist:
-            return HttpResponseNotFound("Recipe does not exist")
+        except Recipe.DoesNotExist:
+            return HttpResponseNotFound({'error': 'Recipe does not exist'}, status=404)
     else:
         initial_data = {}
         recipe = None
@@ -221,17 +223,26 @@ def add_recipe(request, recipe_id=None):
             litre = request.POST.get('litre')
             ebc = request.POST.get('ebc')
             ibu = request.POST.get('ibu')
-            recipe, created = Recipe.objects.update_or_create(
-                id=recipe_id,
-                defaults={
-                    'name': name,
-                    'litre': litre,
-                    'ebc': ebc,
-                    'ibu': ibu,
-                    'id_user': request.user
-                }
-            )
-            return JsonResponse({'success': 'Recipe saved successfully', 'recipe_id': recipe.id})
+            try:
+                recipe, created = Recipe.objects.update_or_create(
+                    id=recipe_id,
+                    defaults={
+                        'name': name,
+                        'litre': litre,
+                        'ebc': ebc,
+                        'ibu': ibu,
+                        'id_user': request.user
+                    }
+                )
+                return JsonResponse({'success': 'Recipe saved successfully', 'recipe_id': recipe.id})
+            except Recipe.DoesNotExist:
+                return JsonResponse({'error': 'Recipe does not exists'}, status=404)
+            except IntegrityError:
+                return JsonResponse({'error': 'Integrity error while adding an recipe'}, status=400)
+            except ValidationError as e:
+                return JsonResponse({'error': f'Validation error: {e.message}'}, status=400)
+            except Exception as e:
+                return JsonResponse({'error': f'Unexpected error: {str(e)}'}, status=500)
         else:
             return JsonResponse({'error': 'Invalid AJAX request'}, status=500)
     else:
@@ -241,13 +252,18 @@ def add_recipe(request, recipe_id=None):
 @login_required
 def check_missing_ingredients_from_recipe(request):
     recipe_id = request.GET.get('recipe_id')
-    inventory = Inventory.objects.filter(id_user=request.user)
-    default_inventory = inventory.filter(is_default=True).first()
-    if not default_inventory:
-        return JsonResponse({'error': 'Default inventory not found'}, status=404)
+    try:
+        inventory = Inventory.objects.filter(id_user=request.user)
+        default_inventory = inventory.filter(is_default=True).first()
+        ingredients_recipe = IngredientRecipe.objects.filter(id_recipe=recipe_id).select_related('id_ingredient')
+        name_recipe = Recipe.objects.get(id=recipe_id).name
+    except Inventory.DoesNotExist:
+        return JsonResponse({'error': 'Default inventory does not exists'}, status=404)
+    except Recipe.DoesNotExist:
+        return JsonResponse({'error': 'Recipe does not exist'}, status=404)
+    except IngredientRecipe.DoesNotExist:
+        return JsonResponse({'error': 'Recipe ingredients does not exist'}, status=404)
 
-    ingredients_recipe = IngredientRecipe.objects.filter(id_recipe=recipe_id).select_related('id_ingredient')
-    name_recipe = Recipe.objects.get(id=recipe_id).name
     missing_ingredients = []
 
     if not ingredients_recipe:
@@ -258,18 +274,20 @@ def check_missing_ingredients_from_recipe(request):
         return JsonResponse(response)
 
     for ingredient in ingredients_recipe:
-        inventory_ingredient = InventoryIngredient.objects.get(id_inventory=default_inventory.id,
-                                                               id_ingredient=ingredient.id_ingredient)
-        if inventory_ingredient.quantity < ingredient.quantity:
-            missing_quantity = inventory_ingredient.quantity - ingredient.quantity
-            missing_ingredients.append({
-                'name_ingredient': ingredient.id_ingredient.name,
-                'recipe_quantity': ingredient.quantity,
-                'available_quantity': inventory_ingredient.quantity,
-                'missing_quantity': abs(missing_quantity),
-                'measurement_unit': ingredient.measurement_unit
-            })
-
+        try:
+            inventory_ingredient = InventoryIngredient.objects.get(id_inventory=default_inventory.id,
+                                                                   id_ingredient=ingredient.id_ingredient)
+            if inventory_ingredient.quantity < ingredient.quantity:
+                missing_quantity = inventory_ingredient.quantity - ingredient.quantity
+                missing_ingredients.append({
+                    'name_ingredient': ingredient.id_ingredient.name,
+                    'recipe_quantity': ingredient.quantity,
+                    'available_quantity': inventory_ingredient.quantity,
+                    'missing_quantity': abs(missing_quantity),
+                    'measurement_unit': ingredient.measurement_unit
+                })
+        except InventoryIngredient.DoesNotExist:
+            return JsonResponse({'error': 'Inventory ingredient does not exists'}, status=404)
     return JsonResponse({'missing_ingredients': missing_ingredients, 'name_recipe': name_recipe})
 
 
@@ -277,13 +295,17 @@ def check_missing_ingredients_from_recipe(request):
 def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
     try:
         recipe = Recipe.objects.get(id=recipe_id)
-    except ObjectDoesNotExist:
-        return HttpResponseNotFound()
-    hide_button = request.GET.get('hide_back_button', 'true') == 'true'
-    hide_navbar = request.GET.get('hide_navbar_ingredient', 'true') == 'true'
-    core_only = request.GET.get('core_only', 'false') == 'true'
-    inventory = Inventory.objects.filter(id_user=request.user)
-    default_inventory = inventory.filter(is_default=True).first()
+        hide_button = request.GET.get('hide_back_button', 'true') == 'true'
+        hide_navbar = request.GET.get('hide_navbar_ingredient', 'true') == 'true'
+        core_only = request.GET.get('core_only', 'false') == 'true'
+        inventory = Inventory.objects.filter(id_user=request.user)
+        default_inventory = inventory.filter(is_default=True).first()
+    except Recipe.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Recipe does not exists'}, status=404)
+    except Inventory.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Default inventory does not exists'}, status=404)
+    except Exception as e:
+        return HttpResponseNotFound({'error': f'Unexpected error: {str(e)}'}, status=500)
 
     if ingredient_id:
         try:
@@ -300,8 +322,10 @@ def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
                 ingredient.id_ingredient.property) if ingredient.id_ingredient.property else []
             initial_property_data = [{'name': key, 'value': value} for key, value in property_data.items()]
             property_ingredient_recipe = property_ingredient_formset(initial=initial_property_data, prefix='property')
-        except ObjectDoesNotExist:
-            return HttpResponseNotFound('Ingredient not found')
+        except IngredientRecipe.DoesNotExist:
+            return HttpResponseNotFound({'error': 'Recipe ingredients does not exists'}, status=404)
+        except Exception as e:
+            return HttpResponseNotFound({'error': f'Unexpected error: {str(e)}'}, status=500)
     else:
         ingredient = None
         initial_data = {}
@@ -353,44 +377,75 @@ def add_ingredient_to_recipe(request, recipe_id, ingredient_id=None):
                 return JsonResponse(
                     {'error': "Both 'Name Category' and 'New Category Name' cannot be filled at the same time."},
                     status=400)
-            if name_new_category:
-                category, created = Category.objects.get_or_create(name=name_new_category)
-            else:
-                category = Category.objects.get(id=name_category)
+            try:
+                if name_new_category:
+                    category, created = Category.objects.get_or_create(name=name_new_category)
+                else:
+                    category = Category.objects.get(id=name_category)
+            except Category.DoesNotExist:
+                return JsonResponse({'error': 'Category does not exists'}, status=404)
+            except IntegrityError:
+                return JsonResponse({'error': 'Integrity error while adding an category'}, status=400)
+            except Exception as e:
+                return JsonResponse({'error': f'Unexpected error: {str(e)}'}, status=500)
 
-            if ingredient_selected:
-                ingredient = Ingredient.objects.get(id=ingredient_selected)
-            else:
-                ingredient, created = Ingredient.objects.update_or_create(
-                    id=ingredient_id,
-                    defaults={
-                        'name': name_ingredient,
-                        'id_category': category,
-                        'property': properties_yaml,
-                        'comment': comment,
-                        'producer': producer
-                    })
+            try:
+                if ingredient_selected:
+                    ingredient = Ingredient.objects.get(id=ingredient_selected)
+                else:
+                    ingredient, created = Ingredient.objects.update_or_create(
+                        id=ingredient_id,
+                        defaults={
+                            'name': name_ingredient,
+                            'id_category': category,
+                            'property': properties_yaml,
+                            'comment': comment,
+                            'producer': producer
+                        })
+            except Ingredient.DoesNotExist:
+                return JsonResponse({'error': 'Ingredient does not exists'}, status=404)
+            except IntegrityError:
+                return JsonResponse({'error': 'Integrity error while adding an ingredient'}, status=400)
+            except ValidationError as e:
+                return JsonResponse({'error': f'Validation error: {e.message}'}, status=400)
 
-            IngredientRecipe.objects.update_or_create(
-                id_recipe=recipe,
-                id_ingredient=ingredient,
-                defaults={
-                    'quantity': quantity,
-                    'measurement_unit': measurement_unit,
-                    'original_unit': original_unit
-                })
-
-            if ingredient_id is None and ingredient_selected == '':
-                InventoryIngredient.objects.update_or_create(
-                    id_inventory=default_inventory,
+            try:
+                IngredientRecipe.objects.update_or_create(
+                    id_recipe=recipe,
                     id_ingredient=ingredient,
                     defaults={
-                        'quantity': 0,
+                        'quantity': quantity,
                         'measurement_unit': measurement_unit,
-                        'original_unit': original_unit,
-                        'expiry_date': None
+                        'original_unit': original_unit
                     })
-            return JsonResponse({'success': 'Ingredient added successfully'})
+            except IngredientRecipe.DoesNotExist:
+                return JsonResponse({'error': 'Recipe ingredients does not exists'}, status=404)
+            except ValidationError as e:
+                return JsonResponse({'error': f'Validation error: {e.message}'}, status=400)
+            except IntegrityError:
+                return JsonResponse({'error': 'Integrity error while adding an recipe ingredient'}, status=400)
+
+            try:
+                if ingredient_id is None and ingredient_selected == '':
+                    InventoryIngredient.objects.update_or_create(
+                        id_inventory=default_inventory,
+                        id_ingredient=ingredient,
+                        defaults={
+                            'quantity': 0,
+                            'measurement_unit': measurement_unit,
+                            'original_unit': original_unit,
+                            'expiry_date': None
+                        })
+            except InventoryIngredient.DoesNotExist:
+                return JsonResponse({'error': 'Inventory ingredient does not exists'}, status=404)
+            except ValidationError as e:
+                return JsonResponse({'error': f'Validation error: {e.message}'}, status=400)
+            except Exception as e:
+                return JsonResponse({'error': f'Unexpected error: {str(e)}'}, status=500)
+            except IntegrityError:
+                return JsonResponse({'error': 'Integrity error while adding an inventory ingredient'}, status=400)
+
+            return JsonResponse({'success': 'Ingredient saved successfully'})
         else:
             return JsonResponse({'error': 'Invalid AJAX request'}, status=400)
     else:
@@ -443,18 +498,26 @@ def inverse_convert_measurement(request, quantity, measurement_unit):
 
 @login_required
 def load_ingredients_from_inventory(request):
-    inventory = Inventory.objects.filter(id_user=request.user)
-    default_inventory = inventory.filter(is_default=True).first()
+    try:
+        inventory = Inventory.objects.filter(id_user=request.user)
+        default_inventory = inventory.filter(is_default=True).first()
+    except Inventory.DoesNotExist:
+        return JsonResponse({'error': 'Default inventory does not exists'}, status=404)
 
     if default_inventory:
-        inventory_ingredients = InventoryIngredient.objects.filter(id_inventory=default_inventory).select_related(
-            'id_ingredient')
-        ingredients = [{
-            'id': inv_ingredient.id_ingredient.id,
-            'name': inv_ingredient.id_ingredient.name,
-            'quantity': inv_ingredient.quantity,
-            'measurement_unit': inv_ingredient.measurement_unit
-        } for inv_ingredient in inventory_ingredients]
+        try:
+            inventory_ingredients = InventoryIngredient.objects.filter(id_inventory=default_inventory).select_related(
+                'id_ingredient')
+            ingredients = [{
+                'id': inv_ingredient.id_ingredient.id,
+                'name': inv_ingredient.id_ingredient.name,
+                'quantity': inv_ingredient.quantity,
+                'measurement_unit': inv_ingredient.measurement_unit
+            } for inv_ingredient in inventory_ingredients]
+        except InventoryIngredient.DoesNotExist:
+            return JsonResponse({'error': 'Inventory ingredient does not exists'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': f'Unexpected error: {str(e)}'}, status=500)
     else:
         ingredients = []
     return JsonResponse(list(ingredients), safe=False)
@@ -465,8 +528,8 @@ def add_selected_ingredients(request):
     ingredient_id = request.GET.get('ingredient_id')
     try:
         ingredient = InventoryIngredient.objects.get(id_ingredient=ingredient_id)
-    except ObjectDoesNotExist:
-        return JsonResponse({'error': 'Ingredient not found'}, status=400)
+    except InventoryIngredient.DoesNotExist:
+        return JsonResponse({'error': 'Inventory ingredient does not exists'}, status=400)
 
     property_data = yaml.safe_load(
         ingredient.id_ingredient.property) if ingredient.id_ingredient.property else []
@@ -485,18 +548,18 @@ def add_selected_ingredients(request):
 def add_step_to_recipe(request, recipe_id, step_id=None):
     try:
         recipe = Recipe.objects.get(id=recipe_id)
-    except ObjectDoesNotExist:
-        return HttpResponseNotFound()
-    hide_button = request.GET.get('hide_back_button', 'true') == 'true'
-    hide_navbar = request.GET.get('hide_navbar_ingredient', 'true') == 'true'
-    core_only = request.GET.get('core_only', 'false') == 'true'
+        hide_button = request.GET.get('hide_back_button', 'true') == 'true'
+        hide_navbar = request.GET.get('hide_navbar_ingredient', 'true') == 'true'
+        core_only = request.GET.get('core_only', 'false') == 'true'
+    except Recipe.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Recipe does not exists'}, status=404)
     if step_id:
         try:
             step = Step.objects.get(id=step_id)
             initial_data = [{'index': step.index, 'name': step.name, 'description': step.description}
                             for step in Step.objects.filter(id_recipe=recipe)]
-        except ObjectDoesNotExist:
-            return HttpResponseNotFound('Step not found')
+        except Step.DoesNotExist:
+            return HttpResponseNotFound({'error': 'Step does not exists'}, status=404)
     else:
         initial_data = []
         step = None
@@ -525,15 +588,22 @@ def add_step_to_recipe(request, recipe_id, step_id=None):
                 index = request.POST.get(f'step-{i}-index')
                 name = request.POST.get(f'step-{i}-name')
                 description = request.POST.get(f'step-{i}-description')
-                Step.objects.update_or_create(
-                    id=step_id,
-                    defaults={
-                        'index': index,
-                        'name': name,
-                        'description': description,
-                        'id_recipe': recipe
-                    })
-            return JsonResponse({'success': 'Step added successfully'})
+                try:
+                    Step.objects.update_or_create(
+                        id=step_id,
+                        defaults={
+                            'index': index,
+                            'name': name,
+                            'description': description,
+                            'id_recipe': recipe
+                        })
+                    return JsonResponse({'success': 'Step saved successfully'})
+                except Step.DoesNotExist:
+                    return JsonResponse({'error': 'Step does not exists'}, status=404)
+                except IntegrityError:
+                    return JsonResponse({'error': 'Integrity error while adding an step'}, status=400)
+                except ValidationError as e:
+                    return JsonResponse({'error': f'Validation error: {e.message}'}, status=400)
         else:
             return JsonResponse({'error': 'Invalid AJAX request'}, status=400)
     else:
@@ -542,9 +612,16 @@ def add_step_to_recipe(request, recipe_id, step_id=None):
 
 @login_required
 def view_recipes(request, recipe_id):
-    recipe = Recipe.objects.get(id=recipe_id)
-    ingredients = IngredientRecipe.objects.filter(id_recipe=recipe_id)
-    steps = Step.objects.filter(id_recipe=recipe_id)
+    try:
+        recipe = Recipe.objects.get(id=recipe_id)
+        ingredients = IngredientRecipe.objects.filter(id_recipe=recipe_id)
+        steps = Step.objects.filter(id_recipe=recipe_id)
+    except Recipe.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Recipe does not exists'}, status=404)
+    except Step.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Step does not exists'}, status=404)
+    except IngredientRecipe.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Recipe ingredients does not exists'}, status=404)
 
     for ingredient in ingredients:
         measurement_unit = ingredient.original_unit
@@ -585,8 +662,9 @@ def remove_step_from_recipe(request, step_id):
     try:
         step = Step.objects.get(id=step_id)
         recipe = step.id_recipe.id
-    except ObjectDoesNotExist:
-        return HttpResponseNotFound()
+    except Step.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Step does not exists'}, status=404)
+
     step.delete()
     return redirect('view-recipe', recipe)
 
@@ -595,10 +673,15 @@ def remove_step_from_recipe(request, step_id):
 def remove_recipe(request, recipe_id):
     try:
         recipe = Recipe.objects.get(id=recipe_id)
-    except ObjectDoesNotExist:
-        return HttpResponseNotFound("Recipe does not exist")
+        ingredient_recipes = IngredientRecipe.objects.filter(id_recipe=recipe_id)
+        steps = Step.objects.filter(id_recipe=recipe_id)
+    except Recipe.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Recipe does not exists'}, status=404)
+    except IngredientRecipe.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Recipe ingredients does not exists'}, status=404)
+    except Step.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Step does not exists'}, status=404)
 
-    ingredient_recipes = IngredientRecipe.objects.filter(id_recipe=recipe_id)
     for ingredient_recipe in ingredient_recipes:
         ingredient = ingredient_recipe.id_ingredient
         ingredient_recipe.delete()
@@ -606,7 +689,7 @@ def remove_recipe(request, recipe_id):
                 InventoryIngredient.objects.filter(id_ingredient=ingredient).exists()):
             ingredient.delete()
 
-    for step in Step.objects.filter(id_recipe=recipe_id):
+    for step in steps:
         step.delete()
 
     recipe.delete()
@@ -621,8 +704,8 @@ def add_inventory(request, inventory_id=None):
             initial_data = {
                 'name': inventory.name,
             }
-        except ObjectDoesNotExist:
-            return HttpResponseNotFound("Inventory does not exist")
+        except Inventory.DoesNotExist:
+            return HttpResponseNotFound({'error': 'Inventory does not exists'}, status=404)
     else:
         initial_data = {}
         inventory = None
@@ -634,6 +717,7 @@ def add_inventory(request, inventory_id=None):
             'inventory': inventory
         }
         return render(request, 'beerRecipe/addInventory.html', context)
+
     if request.method == 'POST':
         inventory_form = AddInventoryForm(request.POST, instance=inventory)
         if inventory_form.is_valid():
@@ -652,10 +736,13 @@ def add_inventory(request, inventory_id=None):
 def remove_inventory(request, inventory_id):
     try:
         inventory = Inventory.objects.get(id=inventory_id)
-    except ObjectDoesNotExist:
-        return HttpResponseNotFound("Inventory does not exist")
+    except Inventory.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Inventory does not exists'}, status=404)
+    try:
+        ingredient_inventories = InventoryIngredient.objects.filter(id_inventory=inventory_id)
+    except InventoryIngredient.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Inventory ingredients does not exists'}, status=404)
 
-    ingredient_inventories = InventoryIngredient.objects.filter(id_inventory=inventory_id)
     for ingredient_inventory in ingredient_inventories:
         ingredient = ingredient_inventory.id_ingredient
         ingredient_inventory.delete()
@@ -669,9 +756,16 @@ def remove_inventory(request, inventory_id):
 
 @login_required
 def list_ingredient(request, inventory_id):
-    inventories = Inventory.objects.get(id=inventory_id)
-    ingredients = InventoryIngredient.objects.filter(id_inventory=inventory_id)
-    categories = Category.objects.all()
+    try:
+        inventories = Inventory.objects.get(id=inventory_id)
+        ingredients = InventoryIngredient.objects.filter(id_inventory=inventory_id)
+        categories = Category.objects.all()
+    except Inventory.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Inventory does not exists'}, status=404)
+    except InventoryIngredient.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Inventory ingredients does not exists'}, status=404)
+    except Category.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Category does not exists'}, status=404)
 
     for ingredient in ingredients:
         measurement_unit = ingredient.original_unit
@@ -716,8 +810,13 @@ def remove_ingredient_from_inventory(request, ingredient_id):
         ingredient = Ingredient.objects.get(id=ingredient_id)
         inventory_ingredient = InventoryIngredient.objects.get(id_ingredient=ingredient_id)
         inventory = Inventory.objects.get(id=inventory_ingredient.id_inventory.id)
-    except ObjectDoesNotExist:
-        return HttpResponseNotFound()
+    except Ingredient.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Ingredient does not exists'}, status=404)
+    except InventoryIngredient.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Inventory ingredient does not exists'}, status=404)
+    except Inventory.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Inventory does not exists'}, status=404)
+
     ingredient.delete()
     inventory_ingredient.delete()
     inventory.save()
@@ -728,8 +827,8 @@ def remove_ingredient_from_inventory(request, ingredient_id):
 def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
     try:
         inventory = Inventory.objects.get(id=inventory_id)
-    except ObjectDoesNotExist:
-        return HttpResponseNotFound()
+    except Inventory.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Inventory does not exists'}, status=404)
 
     if ingredient_id:
         try:
@@ -749,8 +848,10 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
             initial_property_data = [{'name': key, 'value': value} for key, value in property_data.items()]
 
             property_formset = property_ingredient_formset(initial=initial_property_data, prefix='property')
-        except ObjectDoesNotExist:
-            return HttpResponseNotFound("Ingredient not found")
+        except InventoryIngredient.DoesNotExist:
+            return HttpResponseNotFound({'error': 'Inventory ingredient does not exists'}, status=404)
+        except Exception as e:
+            return HttpResponseNotFound({'error': f'Unexpected error: {str(e)}'}, status=500)
     else:
         ingredient = None
         initial_data = {}
@@ -805,7 +906,14 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
                     category, created = Category.objects.get_or_create(name=name_new_category)
                 else:
                     category = Category.objects.get(id=name_category)
+            except Category.DoesNotExist:
+                return JsonResponse({'error': 'Category does not exists'}, status=404)
+            except IntegrityError:
+                return JsonResponse({'error': 'Integrity error while adding an category'}, status=400)
+            except ValidationError as e:
+                return JsonResponse({'error': f'Validation error: {e.message}'}, status=400)
 
+            try:
                 ingredient, created = Ingredient.objects.update_or_create(id=ingredient_id,
                                                                           defaults={
                                                                               'name': name_ingredient,
@@ -814,6 +922,14 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
                                                                               'comment': comment,
                                                                               'producer': producer,
                                                                           })
+            except Ingredient.DoesNotExist:
+                return JsonResponse({'error': 'Ingredient does not exists'}, status=404)
+            except ValidationError as e:
+                return JsonResponse({'error': f'Validation error: {e.message}'}, status=400)
+            except IntegrityError:
+                return JsonResponse({'error': 'Integrity error while adding an ingredient'}, status=400)
+
+            try:
                 InventoryIngredient.objects.update_or_create(
                     id_inventory=inventory,
                     id_ingredient=ingredient,
@@ -823,10 +939,15 @@ def manage_ingredients_inventory(request, inventory_id, ingredient_id=None):
                         'expiry_date': expiry_date,
                         'original_unit': original_unit
                     })
-                inventory.save()
-                return JsonResponse({'success': 'Ingredient added successfully'})
-            except Exception as e:
-                return JsonResponse({'error': e}, status=500)
+            except InventoryIngredient.DoesNotExist:
+                return JsonResponse({'error': 'Inventory ingredient does not exists'}, status=404)
+            except IntegrityError:
+                return JsonResponse({'error': 'Integrity Error while adding an ingredient'}, status=400)
+            except ValidationError as e:
+                return JsonResponse({'error': f'Validation error: {e.message}'}, status=400)
+
+            inventory.save()
+            return JsonResponse({'success': 'Ingredient saved successfully'})
         else:
             return JsonResponse({'error': 'Invalid AJAX request'}, status=400)
     else:

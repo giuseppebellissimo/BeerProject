@@ -78,7 +78,7 @@
             alertPlaceholder.append(wrapper)
         }
 
-        $('#saveStepButton').on('click', function () {
+        $('#saveStepButton').on('click', function (event) {
             event.preventDefault();
             const form_data = new FormData();
             form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
@@ -100,11 +100,11 @@
                 data: form_data,
                 success: function (response) {
                     clearFormFields();
-                    appendAlert('Step added successfully', 'success');
+                    appendAlert(response.success, 'success');
                     console.log(response);
                 },
                 error: function (error) {
-                    appendAlert('An error occurred. Please try again.', 'danger');
+                    appendAlert(error.error, 'danger');
                     console.log(error);
                 },
                 contentType: false,

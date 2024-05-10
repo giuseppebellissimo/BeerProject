@@ -120,7 +120,7 @@
 
                     $('.property_formset_row').each(function () {
                         $(this).find('input:visible, select, textarea').each(function () {
-                            if ($(this).val() == '' && !$(this).hasClass('exclude-class')) {
+                            if ($(this).val() === '' && !$(this).hasClass('exclude-class')) {
                                 allFilled = false;
                                 return false;
                             }
@@ -165,18 +165,17 @@
                         });
                         form_data.append('total_forms', document.getElementById('id_property-TOTAL_FORMS').value);
 
-
                         $.ajax({
                             type: 'POST',
                             url: event.target.action,
                             data: form_data,
                             success: function (response) {
                                 clearFormFields();
-                                appendAlert('Inventory added or update successfully', 'success');
+                                appendAlert(response.success, 'success');
                                 console.log(response)
                             },
                             error: function (error) {
-                                appendAlert('An error occurred. Please try again.', 'danger');
+                                appendAlert(error.error, 'danger');
                                 console.log(error);
                             },
                             contentType: false,
@@ -195,7 +194,6 @@
                     });
                 }
             });
-
         </script>
     {% endspaceless %}
 {% endblock %}

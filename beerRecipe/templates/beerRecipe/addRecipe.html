@@ -64,7 +64,7 @@
                     alertPlaceholder.append(wrapper)
                 }
 
-                $('#saveRecipeButton').on('click', function () {
+                $('#saveRecipeButton').on('click', function (event) {
                     event.preventDefault();
                     const form_data = new FormData();
 
@@ -84,11 +84,11 @@
                                 $('#action-buttons').removeClass('d-none');
                                 globalRecipeId = response.recipe_id;
                             }
-                            appendAlert('Recipe added successfully', 'success');
+                            appendAlert(response.success, 'success');
                             console.log(response);
                         },
                         error: function (error) {
-                            appendAlert('An error occurred. Please try again.', 'danger');
+                            appendAlert(error.error, 'danger');
                             console.log(error);
                         },
                         contentType: false,
@@ -96,7 +96,7 @@
                     });
                 });
 
-                $('#updateRecipeButton').on('click', function () {
+                $('#updateRecipeButton').on('click', function (event) {
                     event.preventDefault();
                     const form_data = new FormData(document.getElementById('recipe-form'));
                     form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
@@ -108,11 +108,11 @@
                         url: url,
                         data: form_data,
                         success: function (response) {
-                            appendAlert('Ingredient update successfully', 'success');
+                            appendAlert(response.success, 'success');
                             console.log(response)
                         },
                         error: function (error) {
-                            appendAlert('An error occurred. Please try again.', 'danger');
+                            appendAlert(error.error, 'danger');
                             console.log(error);
                         },
                         contentType: false,

@@ -103,7 +103,6 @@
 
         $('#div_id_name_category').hide();
         $('#div_id_name_new_category').hide();
-        const loadIngredientUrl = "{% url 'load-ingredient' %}";
         const addSelectedIngredientUrl = "{% url 'add-selected-ingredients' %}";
 
         $(document).ready(function () {
@@ -146,7 +145,7 @@
                 alertPlaceholder.append(wrapper)
             }
 
-            $('#saveIngredientButton').on('click', function () {
+            $('#saveIngredientButton').on('click', function (event) {
                 event.preventDefault();
                 const form_data = new FormData();
                 const ingredientId = $('#ingredient_selected').val() || '';
@@ -184,11 +183,11 @@
                     data: form_data,
                     success: function (response) {
                         clearFormFields();
-                        appendAlert('Ingredient added successfully', 'success');
+                        appendAlert(response.success, 'success');
                         console.log(response)
                     },
                     error: function (error) {
-                        appendAlert('An error occurred. Please try again.', 'danger');
+                        appendAlert(error.error, 'danger');
                         console.log(error);
                     },
                     contentType: false,
@@ -198,7 +197,7 @@
 
             $('#ingredientModal').on('show.bs.modal', function () {
                 $.ajax({
-                    url: loadIngredientUrl,
+                    url: "{% url 'load-ingredient' %}",
                     type: 'GET',
                     success: function (response) {
                         $('#availableIngredients').empty();
@@ -210,6 +209,7 @@
                         console.log(response)
                     },
                     error: function (error) {
+                        appendAlert(error.error, 'danger');
                         console.log(error);
                     }
                 });
@@ -225,7 +225,7 @@
                 }
 
                 $.ajax({
-                    url: addSelectedIngredientUrl,
+                    url: "{% url 'add-selected-ingredients' %}",
                     type: 'GET',
                     data: {
                         'ingredient_id': selectedIngredientId,
@@ -237,7 +237,7 @@
                         $('#id_measurement_unit').val(data.measurement_unit);
                         updateFormset(data);
                         $('#ingredientModal').modal('hide');
-                        appendAlert('Ingredient loaded successfully', 'success');
+                        appendAlert('Ingredient added successfully', 'success');
                     },
                     error: function (error) {
                         appendAlert('Error. Ingredient loading failed', 'danger');
