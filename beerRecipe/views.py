@@ -97,26 +97,47 @@ def equivalent_ingredients(request):
 
 
 @login_required
-def add_equivalence_classes_of_ingredients(request):
+def add_equivalence_classes_of_ingredients(request, equivalent_class_id=None):
+    if equivalent_class_id:
+        try:
+            equivalent_class = EquivalentIngredients.objects.get(id=equivalent_class_id)
+            initial_data = {
+                'name': equivalent_class.name,
+                'description': equivalent_class.description
+            }
+        except EquivalentIngredients.DoesNotExist:
+            return JsonResponse({'error': 'Equivalent class does not exist'}, status=404)
+    else:
+        initial_data = {}
+        equivalent_class = None
     if request.method == 'GET':
-        form = EquivalenceClassesForm()
-        context = {'form': form}
+        form = EquivalenceClassesForm(initial=initial_data)
+        context = {
+            'form': form,
+            'equivalent_class': equivalent_class
+        }
         return render(request, 'beerRecipe/addEquivalenceClasses.html', context)
     elif request.method == 'POST':
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             name = request.POST.get('name')
             description = request.POST.get('description')
             try:
-                equivalent = EquivalentIngredients.objects.create(name=name, description=description)
+                equivalent, created = EquivalentIngredients.objects.update_or_create(
+                    id=equivalent_class_id,
+                    defaults={
+                        'name': name,
+                        'description': description
+                    }
+                )
                 equivalent.save()
                 equivalent.user.add(request.user)
+                return JsonResponse({'success': 'Equivalence class of Ingredients saved successfully'})
             except IntegrityError:
                 return JsonResponse({'error': 'Integrity error while adding an equivalent ingredient'}, status=400)
             except ValidationError as e:
                 return JsonResponse({'error': f'Validation error: {e.message}'}, status=400)
             except Exception as e:
                 return JsonResponse({'error': f'Unexpected error: {str(e)}'}, status=500)
-            return JsonResponse({'success': 'Recipe saved successfully'})
         else:
             return JsonResponse({'error': 'Invalid AJAX request'}, status=500)
     else:
@@ -140,6 +161,28 @@ def update_equivalence_classes_of_ingredients(request):
                 return JsonResponse({'error': 'Ingredient does not exist'}, status=404)
             except EquivalentIngredients.DoesNotExist:
                 return JsonResponse({'error': 'Equivalent class does not exist'}, status=404)
+            except IntegrityError as e:
+                return JsonResponse({'error': str(e)}, status=400)
+    return HttpResponseNotAllowed(['POST'])
+
+
+@login_required
+def remove_ingredient_from_equivalent_classes(request):
+    if request.method == 'POST':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            ingredient_id = request.POST.get('ingredient_id')
+            equivalent_class_id = request.POST.get('equivalent_class_id')
+            try:
+                ingredient = Ingredient.objects.get(id=ingredient_id)
+                equivalent_class = EquivalentIngredients.objects.get(id=equivalent_class_id)
+                equivalent_class.ingredients.remove(ingredient)
+                equivalent_class.save()
+
+                return JsonResponse({'success': 'Ingredient removed successfully'})
+            except Ingredient.DoesNotExist:
+                return JsonResponse({'error': 'Ingredient does not exist.'}, status=404)
+            except EquivalentIngredients.DoesNotExist:
+                return JsonResponse({'error': 'Equivalent class does not exist.'}, status=404)
             except IntegrityError as e:
                 return JsonResponse({'error': str(e)}, status=400)
     return HttpResponseNotAllowed(['POST'])
@@ -526,8 +569,12 @@ def remove_ingredient_form_recipe(request, ingredient_id):
     try:
         ingredient_recipe = IngredientRecipe.objects.get(id_ingredient=ingredient_id)
         recipe = ingredient_recipe.id_recipe.id
-    except ObjectDoesNotExist:
-        return HttpResponseNotFound()
+    except Recipe.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Recipe not found'}, status=404)
+    except IngredientRecipe.DoesNotExist:
+        return HttpResponseNotFound({'error': 'Ingredient in recipe not found'}, status=404)
+    except IntegrityError as e:
+        return HttpResponseNotFound({'error': str(e)}, status=400)
 
     ingredient_recipe.delete()
     return redirect('view-recipe', recipe)

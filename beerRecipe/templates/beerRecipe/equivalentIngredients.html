@@ -9,7 +9,6 @@
         .dropzone {
             min-height: 50px;
             background-color: #f8f9fa;
-            border: dashed 2px #6c757d;
         }
 
         .list-group-item {
@@ -66,7 +65,13 @@
                                                         data-bs-target="#flush-collapse{{ equivalent_class.id }}"
                                                         aria-expanded="false"
                                                         aria-controls="flush-collapse{{ equivalent_class.id }}">
-                                                    <strong>{{ equivalent_class.name }}</strong>
+
+                                                    <a class="btn btn-primary rounded-pill"
+                                                       style="height: fit-content"
+                                                       href="{% url 'add-equivalent-classes' equivalent_class.id %}">
+                                                        {{ equivalent_class.name }}
+                                                        <i class="bi bi-pencil-square" style="padding-left: 10px"></i>
+                                                    </a>
                                                 </button>
                                             </h2>
                                             <div id="flush-collapse{{ equivalent_class.id }}"
@@ -79,8 +84,16 @@
                                                     <ul class="list-group"
                                                         id="ingredients-list-{{ equivalent_class.id }}">
                                                         {% for ingredient in equivalent_class.ingredients.all %}
-                                                            <li class="list-group-item"
-                                                                id="ingredient-{{ ingredient.id }}">{{ ingredient.name }}</li>
+                                                            <li class="list-group-item d-flex justify-content-between align-items-center"
+                                                                id="ingredient-{{ ingredient.id }}-{{ equivalent_class.id }}">{{ ingredient.name }}
+                                                                <a class="btn btn-danger rounded-pill"
+                                                                   style="height: fit-content"
+                                                                   href="#confirmDelete"
+                                                                   onclick="confirmDeleteIngredient({{ ingredient.id }}, {{ equivalent_class.id }})"
+                                                                   data-bs-toggle="modal">
+                                                                    <i class="bi bi-trash"></i>
+                                                                </a>
+                                                            </li>
                                                         {% endfor %}
                                                     </ul>
                                                 </div>
@@ -97,25 +110,31 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Modal for confirm delete-->
+                <div class="modal" tabindex="-1" id="confirmDelete" role="dialog"
+                     aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="confirmDeleteModalLabel">Confirm Delete</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>Are you sure you want to delete?</p>
+                            </div>
+                            <div class="modal-footer">
+                                <a class="btn btn-danger btn-ok" id="confirmDeleteBtn">Yes</a>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         {% endif %}
 
         <script type="text/javascript">
-            $(document).ready(function () {
-                const alertPlaceholder = document.getElementById('liveAlertPlaceholder');
-                const appendAlert = (message, type) => {
-                    const wrapper = document.createElement('div');
-                    wrapper.innerHTML = [
-                        `<div class="alert alert-${type} alert-dismissible" role="alert">`,
-                        `   <div>${message}</div>`,
-                        '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
-                        '</div>'
-                    ].join('');
-
-                    alertPlaceholder.append(wrapper)
-                }
-            });
-
             function handleDragStart(event) {
                 event.dataTransfer.setData("text/plain", event.target.id);
             }
@@ -127,8 +146,7 @@
             function dropIngredient(event, equivalentClassId) {
                 event.preventDefault();
                 const ingredientId = event.dataTransfer.getData("text").split('-')[1];
-                const ingredientElement = document.getElementById('ingredient-' + ingredientId);
-                const ingredientList = document.getElementById('ingredients-list-' + equivalentClassId);
+                const ingredientElementId = `ingredient-${ingredientId}-${equivalentClassId}`;
 
                 $.ajax({
                     type: 'POST',
@@ -140,8 +158,22 @@
                     },
                     success: function (response) {
                         if (response.success) {
-                            const newElement = ingredientElement.cloneNode(true);
-                            ingredientList.appendChild(newElement);
+                            const ingredientElement = document.getElementById(`ingredient-${ingredientId}`);
+                            const ingredientName = ingredientElement.innerText;
+                            console.log(ingredientElementId);
+                            let newElement = document.createElement('li');
+                            newElement.id = ingredientElementId;
+                            newElement.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
+                            newElement.innerHTML = `${ingredientName}
+                           <a class="btn btn-danger rounded-pill"
+                              style="height: fit-content"
+                              href="#confirmDelete"
+                              onclick="confirmDeleteIngredient(${ingredientId}, ${equivalentClassId})"
+                              data-bs-toggle="modal">
+                                 <i class="bi bi-trash"></i>
+                           </a>`;
+                            document.getElementById(`ingredients-list-${equivalentClassId}`).appendChild(newElement);
+
                             appendAlert(response.success, 'success')
                         } else {
                             appendAlert(response.error, 'danger');
@@ -152,6 +184,57 @@
                         appendAlert(error.statusText, 'danger');
                     }
                 });
+            }
+
+            function confirmDeleteIngredient(ingredientId, equivalentClassId) {
+                ingredientToDelete = ingredientId;
+                equivalentClassIdToDelete = equivalentClassId;
+                $('#confirmDelete').modal('show');
+            }
+
+            $('#confirmDeleteBtn').on('click', function () {
+                if (ingredientToDelete !== null && equivalentClassIdToDelete !== null) {
+                    removeIngredient(ingredientToDelete, equivalentClassIdToDelete);
+                    $('#confirmDelete').modal('hide');
+                }
+            });
+
+            function removeIngredient(ingredientId, equivalentClassId) {
+                $.ajax({
+                    type: 'POST',
+                    url: "{% url 'remove-ingredient-from-equivalent-class' %}",
+                    data: {
+                        'ingredient_id': ingredientId,
+                        'equivalent_class_id': equivalentClassId,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            const ingredientElementId = `ingredient-${ingredientId}-${equivalentClassId}`;
+                            const ingredientElement = document.getElementById(ingredientElementId);
+                            ingredientElement.parentNode.removeChild(ingredientElement);
+                            appendAlert(response.success, 'success');
+                        } else {
+                            appendAlert(response.error, 'danger');
+                        }
+                    },
+                    error: function (xhr) {
+                        appendAlert('An error occurred: ' + xhr.status + ' ' + xhr.statusText, 'danger');
+                    }
+                });
+            }
+
+            function appendAlert(message, type) {
+                const alertPlaceholder = document.getElementById('liveAlertPlaceholder');
+                const wrapper = document.createElement('div');
+                wrapper.innerHTML = [
+                    `<div class="alert alert-${type} alert-dismissible" role="alert">`,
+                    `   <div>${message}</div>`,
+                    '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+                    '</div>'
+                ].join('');
+
+                alertPlaceholder.append(wrapper)
             }
         </script>
     {% endspaceless %}

@@ -8,7 +8,12 @@
 
             <h3 style="margin-left: 12px">Equivalence Classes of Ingredients</h3>
             <div class="container-fluid" id="equivalence-classes-container">
-                <form id="equivalence-classes-form" method="post" action="{% url 'add-equivalent-classes' %}">
+                <form id="equivalence-classes-form" method="post"
+                      action="{% if equivalent_class %}
+                              {% url 'add-equivalent-classes' equivalent_class.id %}
+                              {% else %}
+                              {% url 'add-equivalent-classes' %}
+                              {% endif %}">
                     {% csrf_token %}
                     {% crispy form %}
                 </form>
@@ -45,11 +50,11 @@
                         url: event.target.action,
                         data: form_data,
                         success: function (response) {
-                            appendAlert('Equivalence Classe of Ingredients added successfully', 'success');
+                            appendAlert(response.success, 'success');
                             console.log(response);
                         },
                         error: function (error) {
-                            appendAlert('An error occurred. Please try again.', 'danger');
+                            appendAlert(error.error, 'danger');
                             console.log(error);
                         },
                         contentType: false,
