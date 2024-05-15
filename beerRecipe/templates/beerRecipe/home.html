@@ -96,6 +96,25 @@
                 </div>
             </div>
 
+            <!-- Modal for Recipe Details and Missing Ingredients -->
+            <div class="modal fade" id="showRecipeDetailsModal" tabindex="-1" role="dialog"
+                 aria-labelledby="showRecipeDetailsModalLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="showRecipeDetailsModalLabel">Missing Ingredients</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="availableRecipe"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Modal for select default inventory -->
             <div class="modal fade" id="defaultInventoryModal" tabindex="-1" role="dialog"
                  aria-labelledby="defaultInventoryModalLabel" aria-hidden="true">
@@ -125,30 +144,9 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Modal for Recipe Details and Missing Ingredients -->
-            <div class="modal fade" id="showRecipeDetailsModal" tabindex="-1" role="dialog"
-                 aria-labelledby="showRecipeDetailsModalLabel" aria-hidden="true">
-                <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="showRecipeDetailsModalLabel">Missing Ingredients</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div id="availableRecipe"></div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
         {% endif %}
 
         <script type="text/javascript">
-            const checkMissingIngredientsRecipeUrl = "{% url 'check-missing-ingredients-recipe' %}";
-
             $(document).ready(function () {
                 $('#confirmDelete').on('show.bs.modal', function (e) {
                     $(this).find('.btn-ok').attr('href', $(e.relatedTarget).data('href'));
@@ -166,7 +164,7 @@
                             let recipeID = checkbox.value;
 
                             $.ajax({
-                                url: checkMissingIngredientsRecipeUrl,
+                                url: "{% url 'check-missing-ingredients-recipe' %}",
                                 type: 'GET',
                                 data: {
                                     'recipe_id': recipeID,
@@ -181,11 +179,21 @@
                                         let list = $('<ul>');
 
                                         data.missing_ingredients.forEach(function (ingredient) {
+                                            let equivalentIngredientsHtml = '';
+                                            if (ingredient.equivalents && ingredient.equivalents.length > 0) {
+                                                equivalentIngredientsHtml += '<span style="color: darkgreen; padding-left: 40px;">Equivalent Ingredients:</span><br>';
+                                                ingredient.equivalents.forEach(function (equivalent) {
+                                                    equivalentIngredientsHtml +=
+                                                        `<span style="padding-left: 60px;">${equivalent.name}: ${equivalent.available_quantity} ${equivalent.measurement_unit}</span><br>`;
+                                                });
+                                            }
+
                                             list.append(`<li>
                                                                 <strong style="padding-left: 20px;">${ingredient.name_ingredient}</strong><br>
                                                                 <span style="padding-left: 40px;">Recipe quantity: ${ingredient.recipe_quantity} ${ingredient.measurement_unit}</span><br>
                                                                 <span style="padding-left: 40px;">Quantity available: ${ingredient.available_quantity} ${ingredient.measurement_unit}</span><br>
                                                                 <span style="padding-left: 40px; color: darkred;">Missing quantity: ${ingredient.missing_quantity} ${ingredient.measurement_unit}</span><br>
+                                                                ${equivalentIngredientsHtml}<br>
                                                             </li>`
                                             );
                                         });

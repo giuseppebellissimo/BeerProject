@@ -191,6 +191,20 @@ def remove_ingredient_from_equivalent_classes(request):
 
 
 @login_required
+def remove_equivalent_classes(request):
+    if request.method == 'POST':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            equivalent_class_id = request.POST.get('equivalent_class_id')
+            try:
+                equivalent_class = EquivalentIngredients.objects.get(id=equivalent_class_id)
+                equivalent_class.delete()
+                return JsonResponse({'success': 'Equivalent class removed successfully'})
+            except EquivalentIngredients.DoesNotExist:
+                return JsonResponse({'error': 'Equivalent class does not exist.'}, status=404)
+    return HttpResponseNotAllowed(['POST'])
+
+
+@login_required
 def add_recipe(request, recipe_id=None):
     hide_button = request.GET.get('hide_back_button', 'true') == 'true'
     if recipe_id:
@@ -279,16 +293,56 @@ def check_missing_ingredients_from_recipe(request):
                                                                    id_ingredient=ingredient.id_ingredient)
             if inventory_ingredient.quantity < ingredient.quantity:
                 missing_quantity = inventory_ingredient.quantity - ingredient.quantity
+
+                equivalent_ingredients_list = get_equivalent_ingredients(request, ingredient.id_ingredient.id,
+                                                                         default_inventory.id,
+                                                                         missing_quantity)
                 missing_ingredients.append({
                     'name_ingredient': ingredient.id_ingredient.name,
                     'recipe_quantity': ingredient.quantity,
                     'available_quantity': inventory_ingredient.quantity,
                     'missing_quantity': abs(missing_quantity),
-                    'measurement_unit': ingredient.measurement_unit
+                    'measurement_unit': ingredient.measurement_unit,
+                    'equivalents': equivalent_ingredients_list,
                 })
         except InventoryIngredient.DoesNotExist:
-            return JsonResponse({'error': 'Inventory ingredient does not exists'}, status=404)
+            equivalent_ingredients_list = get_equivalent_ingredients(request, ingredient.id_ingredient.id,
+                                                                     default_inventory.id,
+                                                                     missing_quantity)
+            missing_ingredients.append({
+                'name_ingredient': ingredient.id_ingredient.name,
+                'recipe_quantity': ingredient.quantity,
+                'available_quantity': 0,
+                'missing_quantity': ingredient.quantity,
+                'measurement_unit': ingredient.measurement_unit,
+                'equivalents': equivalent_ingredients_list,
+            })
+
     return JsonResponse({'missing_ingredients': missing_ingredients, 'name_recipe': name_recipe})
+
+
+@login_required
+def get_equivalent_ingredients(request, ingredient_id, inventory_id, missing_quantity):
+    equivalent_ingredients_list = []
+    equivalence_classes = EquivalentIngredients.objects.filter(ingredients=ingredient_id)
+
+    for equivalence_class in equivalence_classes:
+        for equivalent in equivalence_class.ingredients.exclude(id=ingredient_id):
+            try:
+                equivalent_inventory_ingredient = InventoryIngredient.objects.get(
+                    id_ingredient=equivalent,
+                    id_inventory=inventory_id,
+                )
+                if equivalent_inventory_ingredient.quantity >= missing_quantity:
+                    equivalent_ingredients_list.append({
+                        'name': equivalent.name,
+                        'available_quantity': equivalent_inventory_ingredient.quantity,
+                        'measurement_unit': equivalent_inventory_ingredient.measurement_unit,
+                    })
+            except InventoryIngredient.DoesNotExist:
+                continue
+
+    return equivalent_ingredients_list
 
 
 @login_required

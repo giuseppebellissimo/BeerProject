@@ -58,7 +58,7 @@
                                     in each class.</h6>
                                 <div class="accordion accordion-flush" id="accordionEquivalentClasses">
                                     {% for equivalent_class in equivalent_classes %}
-                                        <div class="accordion-item">
+                                        <div class="accordion-item" id="equivalent-class-{{ equivalent_class.id }}">
                                             <h2 class="accordion-header">
                                                 <button class="accordion-button collapsed" type="button"
                                                         data-bs-toggle="collapse"
@@ -71,6 +71,14 @@
                                                        href="{% url 'add-equivalent-classes' equivalent_class.id %}">
                                                         {{ equivalent_class.name }}
                                                         <i class="bi bi-pencil-square" style="padding-left: 10px"></i>
+                                                    </a>
+
+                                                    <a class="btn btn-danger rounded-pill"
+                                                       style="height: fit-content; margin-left: 10px"
+                                                       href="#confirmDelete"
+                                                       onclick="confirmDeleteEquivalenceClass({{ equivalent_class.id }})"
+                                                       data-bs-toggle="modal">
+                                                        <i class="bi bi-trash"></i>
                                                     </a>
                                                 </button>
                                             </h2>
@@ -186,18 +194,50 @@
                 });
             }
 
+            let ingredientToDelete;
+            let equivalentClassIdToDelete;
+            let deleteType;
+
             function confirmDeleteIngredient(ingredientId, equivalentClassId) {
                 ingredientToDelete = ingredientId;
                 equivalentClassIdToDelete = equivalentClassId;
+                deleteType = 'ingredient';
+                $('#confirmDelete').modal('show');
+            }
+
+            function confirmDeleteEquivalenceClass(equivalentClassId) {
+                equivalentClassIdToDelete = equivalentClassId;
+                deleteType = 'equivalence_class';
                 $('#confirmDelete').modal('show');
             }
 
             $('#confirmDeleteBtn').on('click', function () {
-                if (ingredientToDelete !== null && equivalentClassIdToDelete !== null) {
+                if (ingredientToDelete !== null && equivalentClassIdToDelete !== null && deleteType === 'ingredient') {
                     removeIngredient(ingredientToDelete, equivalentClassIdToDelete);
-                    $('#confirmDelete').modal('hide');
+                } else if (deleteType === 'equivalence_class' && equivalentClassIdToDelete !== null) {
+                    removeEquivalenceClass(equivalentClassIdToDelete);
                 }
+                $('#confirmDelete').modal('hide');
             });
+
+            function removeEquivalenceClass(equivalentClassId) {
+                $.ajax({
+                    type: 'POST',
+                    url: "{% url 'remove-equivalent-class' %}",
+                    data: {
+                        'equivalent_class_id': equivalentClassId,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success: function (response) {
+                        const classElement = document.getElementById(`equivalent-class-${equivalentClassId}`);
+                        classElement.parentNode.removeChild(classElement);
+                        appendAlert(response.success, 'success');
+                    },
+                    error: function (error) {
+                        appendAlert(error.error, 'danger');
+                    }
+                });
+            }
 
             function removeIngredient(ingredientId, equivalentClassId) {
                 $.ajax({
