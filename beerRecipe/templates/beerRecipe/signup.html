@@ -39,16 +39,6 @@
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <button class="btn btn-primary" type="submit">Register</button>
                     </div>
-
-                    {% if messages %}
-                        <div class="messages">
-                            {% for message in messages %}
-                                <div class="{% if message.tags %}alert alert-{{ message.tags }}{% endif %}">
-                                    {{ message }}
-                                </div>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
                 </form>
             </div>
         </div>

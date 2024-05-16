@@ -18,16 +18,17 @@ def login_user(request):
         return redirect('home')
 
     if request.method == 'POST':
-        username = request.POST['username']
-        password = request.POST['password']
-        user = authenticate(request, username=username, password=password)
-
-        if user is not None:
-            login(request, user)
-            return redirect('home')
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                login(request, user)
+                return redirect('home')
+            else:
+                return render(request, 'beerRecipe/login.html', {'form': form})
         else:
-            form = AuthenticationForm()
-            messages.error(request, f'Invalid username or password')
             return render(request, 'beerRecipe/login.html', {'form': form})
     else:
         form = AuthenticationForm()
@@ -46,12 +47,10 @@ def signup(request):
             password = form.cleaned_data['password1']
             user = authenticate(username=username, password=password)
             if user is not None:
-                messages.success(request, f'Welcome {username.title()}, your account has been created successfully!')
                 login(request, user)
             return redirect('home')
         else:
-            messages.error(request, f'Fill in the form fields correctly')
-            return render(request, 'beerRecipe/signup.html', {'error': form.errors})
+            return render(request, 'beerRecipe/signup.html', {'form': form})
     else:
         form = NewUserForm()
         return render(request, "beerRecipe/signup.html", {'form': form})
@@ -67,7 +66,21 @@ def logout_user(request):
 def home(request):
     recipes = Recipe.objects.filter(id_user=request.user)
     inventories = Inventory.objects.filter(id_user=request.user)
-    default_inventory = inventories.filter(is_default=True).first()
+    try:
+        default_inventory = inventories.get(is_default=True)
+    except Inventory.DoesNotExist:
+        try:
+            default_inventory = inventories.first()
+            if default_inventory:
+                default_inventory.is_default = True
+                default_inventory.save()
+            else:
+                raise Inventory.DoesNotExist
+        except Inventory.DoesNotExist:
+            default_inventory = Inventory.objects.create(name='Default Inventory', is_default=True)
+            default_inventory.id_user.add(request.user)
+            default_inventory.save()
+
     return render(request, 'beerRecipe/home.html',
                   {'recipes': recipes, 'inventories': inventories, 'default_inventory': default_inventory})
 
