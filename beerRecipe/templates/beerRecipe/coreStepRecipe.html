@@ -80,36 +80,50 @@
 
         $('#saveStepButton').on('click', function (event) {
             event.preventDefault();
-            const form_data = new FormData();
-            form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
 
-            $('#step-form .step_formset_row').each(function (index) {
-                $(this).find(':input').each(function () {
-                    let fieldName = $(this).attr('name').replace(/-\d+-/, `-${index}-`);
-                    form_data.append(fieldName, $(this).val());
+            let allFilled = true;
+            $('.step_formset_row').each(function () {
+                $(this).find('input:visible, textarea:visible').each(function () {
+                    if ($(this).val().trim() === '') {
+                        allFilled = false;
+                        $(this).addClass('is-invalid');
+                    } else {
+                        $(this).removeClass('is-invalid');
+                    }
                 });
             });
 
-            $('#step-form').find(':input[name$="-TOTAL_FORMS"], :input[name$="-INITIAL_FORMS"], :input[name$="-MIN_NUM_FORMS"], :input[name$="-MAX_NUM_FORMS"]').each(function () {
-                form_data.append($(this).attr('name'), $(this).val());
-            });
-            const formStepActionUrl = $('#step-form').attr('action');
-            $.ajax({
-                type: 'POST',
-                url: formStepActionUrl,
-                data: form_data,
-                success: function (response) {
-                    clearFormFields();
-                    appendAlert(response.success, 'success');
-                    console.log(response);
-                },
-                error: function (error) {
-                    appendAlert(error.error, 'danger');
-                    console.log(error);
-                },
-                contentType: false,
-                processData: false,
-            });
+            if (allFilled) {
+                const form_data = new FormData();
+                form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
+                $('#step-form .step_formset_row').each(function (index) {
+                    $(this).find(':input').each(function () {
+                        let fieldName = $(this).attr('name').replace(/-\d+-/, `-${index}-`);
+                        form_data.append(fieldName, $(this).val());
+                    });
+                });
+                $('#step-form').find(':input[name$="-TOTAL_FORMS"], :input[name$="-INITIAL_FORMS"], :input[name$="-MIN_NUM_FORMS"], :input[name$="-MAX_NUM_FORMS"]').each(function () {
+                    form_data.append($(this).attr('name'), $(this).val());
+                });
+                const formStepActionUrl = $('#step-form').attr('action');
+
+                $.ajax({
+                    type: 'POST',
+                    url: formStepActionUrl,
+                    data: form_data,
+                    success: function (response) {
+                        clearFormFields();
+                        appendAlert(response.success, 'success');
+                        console.log(response);
+                    },
+                    error: function (error) {
+                        appendAlert(error.error, 'danger');
+                        console.log(error);
+                    },
+                    contentType: false,
+                    processData: false,
+                });
+            }
         });
 
         function clearFormFields() {

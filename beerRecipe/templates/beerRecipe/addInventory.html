@@ -40,9 +40,18 @@
                 $('#saveInventory').on('click', function (event) {
                     event.preventDefault();
 
+                    const field = document.getElementById('id_name');
+                    if (!field.value.trim()) {
+                        appendAlert('Please enter the inventory name.', 'danger');
+                        field.classList.add('is-invalid');
+                        return;
+                    } else {
+                        field.classList.remove('is-invalid');
+                    }
+
                     const form_data = new FormData();
                     form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
-                    form_data.append('name', document.getElementById('id_name').value);
+                    form_data.append('name', field.value);
 
                     $.ajax({
                         type: 'POST',

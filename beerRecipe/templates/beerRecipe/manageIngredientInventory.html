@@ -118,23 +118,39 @@
                 $('#saveButton').click(function (event) {
                     let allFilled = true;
 
-                    $('.property_formset_row').each(function () {
-                        $(this).find('input:visible, select, textarea').each(function () {
-                            if ($(this).val() === '' && !$(this).hasClass('exclude-class')) {
-                                allFilled = false;
-                                return false;
-                            }
-                        });
-
-                        if (!allFilled) {
-                            return false;
+                    const requiredFields = [
+                        'id_name_ingredient',
+                        'id_quantity',
+                    ]
+                    requiredFields.forEach(function (fieldId) {
+                        const field = document.getElementById(fieldId);
+                        if (field && field.value.trim() === '') {
+                            allFilled = false;
+                            field.classList.add('is-invalid');
+                        } else if (field) {
+                            field.classList.remove('is-invalid');
                         }
                     });
 
-                    if (!allFilled) {
-                        event.preventDefault();
-                        appendAlert('Please fill in all fields before saving ingredient.', 'danger');
-                    } else {
+                    $('.property_formset_row').each(function () {
+                        $(this).find('input:visible, select, textarea').each(function () {
+                            if ($(this).val().trim() === '') {
+                                allFilled = false;
+                                $(this).addClass('is-invalid');
+                            } else {
+                                $(this).removeClass('is-invalid');
+                            }
+                        });
+                    });
+
+                    const nameCategoryField = document.getElementById('id_name_category');
+                    const newCategoryField = document.getElementById('id_name_new_category');
+                    if (!nameCategoryField.value && !newCategoryField.value) {
+                        allFilled = false;
+                        appendAlert("Please fill in at least one of 'Name Category' or 'New Category Name'.", 'danger');
+                    }
+
+                    if (allFilled) {
                         event.preventDefault();
                         const form_data = new FormData();
 
@@ -147,11 +163,6 @@
                         form_data.append('expiry_date', document.getElementById('id_expiry_date').value);
                         form_data.append('comment', document.getElementById('id_comment').value);
                         form_data.append('producer', document.getElementById('id_producer').value);
-
-                        if (document.getElementById('id_name_category').value && document.getElementById('id_name_new_category').value) {
-                            appendAlert("Both 'Name Category' and 'New Category Name' cannot be filled at the same time.", 'danger');
-                            return;
-                        }
                         document.querySelectorAll('.property_formset_row').forEach((element, index) => {
                             if (element.style.display !== 'none') {
                                 let propertyName = element.querySelector('input[name$="-name"]').value;
@@ -164,6 +175,11 @@
                             }
                         });
                         form_data.append('total_forms', document.getElementById('id_property-TOTAL_FORMS').value);
+
+                        if (document.getElementById('id_name_category').value && document.getElementById('id_name_new_category').value) {
+                            appendAlert("Both 'Name Category' and 'New Category Name' cannot be filled at the same time.", 'danger');
+                            return;
+                        }
 
                         $.ajax({
                             type: 'POST',

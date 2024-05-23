@@ -146,53 +146,90 @@
             }
 
             $('#saveIngredientButton').on('click', function (event) {
-                event.preventDefault();
-                const form_data = new FormData();
-                const ingredientId = $('#ingredient_selected').val() || '';
+                let allFilled = true;
 
-                form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
-                form_data.append('name_ingredient', document.getElementById('id_name_ingredient').value);
-                form_data.append('name_category', document.getElementById('id_name_category').value);
-                form_data.append('name_new_category', document.getElementById('id_name_new_category').value);
-                form_data.append('quantity', document.getElementById('id_quantity').value);
-                form_data.append('measurement_unit', document.getElementById('id_measurement_unit').value);
-                form_data.append('comment', document.getElementById('id_comment').value);
-                form_data.append('producer', document.getElementById('id_producer').value);
-                form_data.append('ingredient_selected', ingredientId);
-
-                if (document.getElementById('id_name_category').value && document.getElementById('id_name_new_category').value) {
-                    alert("Both 'Name Category' and 'New Category Name' cannot be filled at the same time.");
-                }
-                document.querySelectorAll('.formset_row').forEach((element, index) => {
-                    if (element.style.display !== 'none') {
-                        let propertyName = element.querySelector('input[name$="-name"]').value;
-                        let propertyValue = element.querySelector('input[name$="-value"]').value;
-
-                        if (propertyName && propertyValue) {
-                            form_data.append(`property-${index}-name`, propertyName);
-                            form_data.append(`property-${index}-value`, propertyValue);
-                        }
+                const requiredFields = [
+                    'id_name_ingredient',
+                    'id_quantity',
+                ]
+                requiredFields.forEach(function (fieldId) {
+                    const field = document.getElementById(fieldId);
+                    if (field && field.value.trim() === '') {
+                        allFilled = false;
+                        field.classList.add('is-invalid');
+                    } else if (field) {
+                        field.classList.remove('is-invalid');
                     }
                 });
-                form_data.append('total_forms', document.getElementById('id_property-TOTAL_FORMS').value);
 
-                const formIngredientActionUrl = $('#ingredient-form').attr('action');
-                $.ajax({
-                    type: 'POST',
-                    url: formIngredientActionUrl,
-                    data: form_data,
-                    success: function (response) {
-                        clearFormFields();
-                        appendAlert(response.success, 'success');
-                        console.log(response)
-                    },
-                    error: function (error) {
-                        appendAlert(error.error, 'danger');
-                        console.log(error);
-                    },
-                    contentType: false,
-                    processData: false,
+                $('.formset_row').each(function () {
+                    $(this).find('input:visible, select, textarea').each(function () {
+                        if ($(this).val().trim() === '') {
+                        allFilled = false;
+                        $(this).addClass('is-invalid');
+                    } else {
+                        $(this).removeClass('is-invalid');
+                    }
+                    });
                 });
+
+                const nameCategoryField = document.getElementById('id_name_category');
+                const newCategoryField = document.getElementById('id_name_new_category');
+                if (!nameCategoryField.value && !newCategoryField.value) {
+                    allFilled = false;
+                    appendAlert("Please fill in at least one of 'Name Category' or 'New Category Name'.", 'danger');
+                }
+
+                if (allFilled) {
+                    event.preventDefault();
+                    const form_data = new FormData();
+                    const ingredientId = $('#ingredient_selected').val() || '';
+
+                    form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
+                    form_data.append('name_ingredient', document.getElementById('id_name_ingredient').value);
+                    form_data.append('name_category', document.getElementById('id_name_category').value);
+                    form_data.append('name_new_category', document.getElementById('id_name_new_category').value);
+                    form_data.append('quantity', document.getElementById('id_quantity').value);
+                    form_data.append('measurement_unit', document.getElementById('id_measurement_unit').value);
+                    form_data.append('comment', document.getElementById('id_comment').value);
+                    form_data.append('producer', document.getElementById('id_producer').value);
+                    form_data.append('ingredient_selected', ingredientId);
+                    document.querySelectorAll('.formset_row').forEach((element, index) => {
+                        if (element.style.display !== 'none') {
+                            let propertyName = element.querySelector('input[name$="-name"]').value;
+                            let propertyValue = element.querySelector('input[name$="-value"]').value;
+
+                            if (propertyName && propertyValue) {
+                                form_data.append(`property-${index}-name`, propertyName);
+                                form_data.append(`property-${index}-value`, propertyValue);
+                            }
+                        }
+                    });
+                    form_data.append('total_forms', document.getElementById('id_property-TOTAL_FORMS').value);
+
+                    if (document.getElementById('id_name_category').value && document.getElementById('id_name_new_category').value) {
+                        alert("Both 'Name Category' and 'New Category Name' cannot be filled at the same time.");
+                        return;
+                    }
+
+                    const formIngredientActionUrl = $('#ingredient-form').attr('action');
+                    $.ajax({
+                        type: 'POST',
+                        url: formIngredientActionUrl,
+                        data: form_data,
+                        success: function (response) {
+                            clearFormFields();
+                            appendAlert(response.success, 'success');
+                            console.log(response)
+                        },
+                        error: function (error) {
+                            appendAlert(error.error, 'danger');
+                            console.log(error);
+                        },
+                        contentType: false,
+                        processData: false,
+                    });
+                }
             });
 
             $('#ingredientModal').on('show.bs.modal', function () {

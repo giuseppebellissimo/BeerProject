@@ -1,5 +1,4 @@
 import yaml
-from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
@@ -306,7 +305,6 @@ def check_missing_ingredients_from_recipe(request):
                                                                    id_ingredient=ingredient.id_ingredient)
             if inventory_ingredient.quantity < ingredient.quantity:
                 missing_quantity = inventory_ingredient.quantity - ingredient.quantity
-
                 equivalent_ingredients_list = get_equivalent_ingredients(request, ingredient.id_ingredient.id,
                                                                          default_inventory.id,
                                                                          missing_quantity)
@@ -346,7 +344,8 @@ def get_equivalent_ingredients(request, ingredient_id, inventory_id, missing_qua
                     id_ingredient=equivalent,
                     id_inventory=inventory_id,
                 )
-                if equivalent_inventory_ingredient.quantity >= missing_quantity:
+
+                if equivalent_inventory_ingredient.quantity >= abs(missing_quantity):
                     equivalent_ingredients_list.append({
                         'name': equivalent.name,
                         'available_quantity': equivalent_inventory_ingredient.quantity,

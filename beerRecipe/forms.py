@@ -116,7 +116,7 @@ class InventoryIngredientForm(forms.ModelForm):
     measurement_unit = forms.ChoiceField(choices=MEASUREMENT_CHOICES, required=False)
     comment = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control form-control-sm'}), required=False)
     expiry_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=False)
-    producer = forms.CharField(max_length=100)
+    producer = forms.CharField(max_length=100, required=False)
 
     class Meta:
         model = InventoryIngredient

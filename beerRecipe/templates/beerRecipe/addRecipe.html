@@ -65,35 +65,55 @@
                 }
 
                 $('#saveRecipeButton').on('click', function (event) {
-                    event.preventDefault();
-                    const form_data = new FormData();
+                    let allFilled = true;
 
-                    form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
-                    form_data.append('name', document.getElementById('id_name').value);
-                    form_data.append('litre', document.getElementById('id_litre').value);
-                    form_data.append('ebc', document.getElementById('id_ebc').value);
-                    form_data.append('ibu', document.getElementById('id_ibu').value);
-
-                    $.ajax({
-                        type: 'POST',
-                        url: event.target.action,
-                        data: form_data,
-                        success: function (response) {
-                            if (response.recipe_id) {
-                                $('#saveRecipeButton').hide();
-                                $('#action-buttons').removeClass('d-none');
-                                globalRecipeId = response.recipe_id;
-                            }
-                            appendAlert(response.success, 'success');
-                            console.log(response);
-                        },
-                        error: function (error) {
-                            appendAlert(error.error, 'danger');
-                            console.log(error);
-                        },
-                        contentType: false,
-                        processData: false,
+                    const requiredFields = [
+                        'id_name',
+                        'id_litre',
+                        'id_ebc',
+                        'id_ibu',
+                    ]
+                    requiredFields.forEach(function (fieldId) {
+                        const field = document.getElementById(fieldId);
+                        if (field && field.value.trim() === '') {
+                            allFilled = false;
+                            field.classList.add('is-invalid');
+                        } else if (field) {
+                            field.classList.remove('is-invalid');
+                        }
                     });
+
+                    if (allFilled) {
+                        event.preventDefault();
+                        const form_data = new FormData();
+
+                        form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
+                        form_data.append('name', document.getElementById('id_name').value);
+                        form_data.append('litre', document.getElementById('id_litre').value);
+                        form_data.append('ebc', document.getElementById('id_ebc').value);
+                        form_data.append('ibu', document.getElementById('id_ibu').value);
+
+                        $.ajax({
+                            type: 'POST',
+                            url: event.target.action,
+                            data: form_data,
+                            success: function (response) {
+                                if (response.recipe_id) {
+                                    $('#saveRecipeButton').hide();
+                                    $('#action-buttons').removeClass('d-none');
+                                    globalRecipeId = response.recipe_id;
+                                }
+                                appendAlert(response.success, 'success');
+                                console.log(response);
+                            },
+                            error: function (error) {
+                                appendAlert(error.error, 'danger');
+                                console.log(error);
+                            },
+                            contentType: false,
+                            processData: false,
+                        });
+                    }
                 });
 
                 $('#updateRecipeButton').on('click', function (event) {
