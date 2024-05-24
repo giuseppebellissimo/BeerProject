@@ -8,6 +8,7 @@ urlpatterns = [
     path('home/', views.home, name='home'),
     path('remove-recipe/<int:recipe_id>/', views.remove_recipe, name='remove-recipe'),
     path('remove-inventory/<int:inventory_id>/', views.remove_inventory, name='remove-inventory'),
+    path('default-inventory/', views.default_inventory_view, name='default-inventory'),
     path('set-default-inventory/<int:inventory_id>/', views.set_default_inventory, name='set-default-inventory'),
     path('equivalent-ingredients/', views.equivalent_ingredients, name='equivalent-ingredients'),
     path('add-equivalent-classes/', views.add_equivalence_classes_of_ingredients, name='add-equivalent-classes'),

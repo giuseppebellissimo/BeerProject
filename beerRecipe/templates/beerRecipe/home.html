@@ -114,36 +114,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Modal for select default inventory -->
-            <div class="modal fade" id="defaultInventoryModal" tabindex="-1" role="dialog"
-                 aria-labelledby="defaultInventoryModalLabel" aria-hidden="true">
-                <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="defaultInventoryModalLabel">Select Default Inventory</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            {% for inventory in inventories %}
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="defaultInventory"
-                                           id="defaultInventory{{ inventory.id }}" value="{{ inventory.id }}"
-                                            {% if default_inventory.id == inventory.id %} checked {% endif %}>
-                                    <label class="form-check-label" for="defaultInventory{{ inventory.id }}">
-                                        {{ inventory.name }}
-                                    </label>
-                                </div>
-                            {% endfor %}
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-primary" onclick="setDefaultInventory()">Set as
-                                Default
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
         {% endif %}
 
         <script type="text/javascript">
@@ -216,12 +186,6 @@
                     }
                 });
             });
-
-            function setDefaultInventory() {
-                let selectedInventory = document.querySelector('input[name="defaultInventory"]:checked').value;
-                let baseUrl = "{% url 'set-default-inventory' 0 %}";
-                window.location.href = baseUrl.replace('0', selectedInventory);
-            }
         </script>
     {% endspaceless %}
 {% endblock %}

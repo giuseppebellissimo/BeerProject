@@ -85,15 +85,35 @@ def home(request):
 
 
 @login_required
-def set_default_inventory(request, inventory_id):
+def default_inventory_view(request):
     try:
-        Inventory.objects.filter(id_user=request.user).update(is_default=False)
-        default_inventory = Inventory.objects.get(id=inventory_id, id_user=request.user)
-        default_inventory.is_default = True
+        inventories = Inventory.objects.filter(id_user=request.user)
+        default_inventory = inventories.get(is_default=True)
+        context = {
+            'default_inventory': default_inventory,
+            'inventories': inventories,
+        }
+        return render(request, 'beerRecipe/setDefaultInventory.html', context)
     except Inventory.DoesNotExist:
-        return HttpResponseNotFound({'error': 'Inventory does not exist'}, status=404)
-    default_inventory.save()
-    return redirect('home')
+        return JsonResponse({'error': 'Inventory does not exist'}, status=404)
+
+
+@login_required
+def set_default_inventory(request, inventory_id):
+    if request.method == 'POST':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            try:
+                Inventory.objects.filter(id_user=request.user).update(is_default=False)
+                default_inventory = Inventory.objects.get(id=inventory_id, id_user=request.user)
+                default_inventory.is_default = True
+            except Inventory.DoesNotExist:
+                return JsonResponse({'error': 'Inventory does not exist'}, status=404)
+            default_inventory.save()
+            return JsonResponse({'success': 'Default inventory updated successfully.'})
+        else:
+            return JsonResponse({'error': 'Invalid AJAX request'}, status=500)
+    else:
+        return HttpResponseNotAllowed(['POST'])
 
 
 @login_required

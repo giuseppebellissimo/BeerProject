@@ -23,8 +23,7 @@
                             {{ user.username }}
                         </a>
                         <div class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink">
-                            <a class="dropdown-item" href="#" data-bs-toggle="modal"
-                               data-bs-target="#defaultInventoryModal">
+                            <a class="dropdown-item" href="{% url 'default-inventory' %}">
                                 Default Inventory</a>
                             <a class="dropdown-item" href="{% url 'equivalent-ingredients' %}">Equivalent
                                 Ingredients</a>
