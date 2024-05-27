@@ -105,8 +105,14 @@ class InventoryIngredient(models.Model):
     original_unit = models.CharField(max_length=10)
 
 
-class EquivalentIngredients(models.Model):
+class EquivalentClass(models.Model):
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=200)
-    ingredients = models.ManyToManyField(Ingredient)
+    ingredients = models.ManyToManyField(Ingredient, through='EquivalentClass_Ingredients')
     user = models.ManyToManyField(User)
+
+
+class EquivalentClass_Ingredients(models.Model):
+    ingredients = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
+    equivalent_class = models.ForeignKey(EquivalentClass, on_delete=models.CASCADE)
+    proportion = models.CharField(max_length=100)

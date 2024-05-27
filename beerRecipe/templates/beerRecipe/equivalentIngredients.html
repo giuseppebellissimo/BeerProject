@@ -1,4 +1,5 @@
 {% extends 'beerRecipe/baseHome.html' %}
+{% load crispy_forms_tags %}
 
 {% block head %}
     <style>
@@ -12,7 +13,7 @@
         }
 
         .list-group-item {
-            user-select: none; /* Prevent selection on drag */
+            user-select: none;
         }
     </style>
 {% endblock %}
@@ -93,12 +94,23 @@
                                                         id="ingredients-list-{{ equivalent_class.id }}">
                                                         {% for ingredient in equivalent_class.ingredients.all %}
                                                             <li class="list-group-item d-flex justify-content-between align-items-center"
-                                                                id="ingredient-{{ ingredient.id }}-{{ equivalent_class.id }}">{{ ingredient.name }}
+                                                                id="ingredient-{{ ingredient.id }}-{{ equivalent_class.id }}"
+                                                                draggable="true">
+                                                                {{ ingredient.name }}
+                                                                <a class="btn btn-primary rounded-pill"
+                                                                   style="height: fit-content"
+                                                                   href="#"
+                                                                   onclick="editProportion(event,{{ ingredient.id }},{{ equivalent_class.id }})"
+                                                                   data-bs-toggle="modal"
+                                                                   data-bs-target="#proportions">
+                                                                    <i class="bi bi-pencil-square"></i>
+                                                                </a>
                                                                 <a class="btn btn-danger rounded-pill"
                                                                    style="height: fit-content"
                                                                    href="#confirmDelete"
                                                                    onclick="confirmDeleteIngredient({{ ingredient.id }}, {{ equivalent_class.id }})"
-                                                                   data-bs-toggle="modal">
+                                                                   data-bs-toggle="modal"
+                                                                   data-bs-target="#confirmDelete">
                                                                     <i class="bi bi-trash"></i>
                                                                 </a>
                                                             </li>
@@ -119,7 +131,7 @@
                     </div>
                 </div>
 
-                <!-- Modal for confirm delete-->
+                <!-- Modal for confirm delete -->
                 <div class="modal" tabindex="-1" id="confirmDelete" role="dialog"
                      aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
                     <div class="modal-dialog" role="document">
@@ -134,6 +146,32 @@
                             </div>
                             <div class="modal-footer">
                                 <a class="btn btn-danger btn-ok" id="confirmDeleteBtn">Yes</a>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal for the proportions field between equivalent ingredients -->
+                <div class="modal" tabindex="-1" id="proportions" role="dialog"
+                     aria-labelledby="proportionsModalLabel" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="proportionsModalLabel">Enter the proportion</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="proportionForm" method="POST" action="{% url 'update-equivalent-classes' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" id="modalIngredientId" name="ingredient_id">
+                                    <input type="hidden" id="modalEquivalentClassId" name="equivalent_class_id">
+                                    {% crispy proportion_form %}
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <a class="btn btn-success btn-ok" id="proportionsBtn">Save</a>
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                             </div>
                         </div>
@@ -154,45 +192,117 @@
             function dropIngredient(event, equivalentClassId) {
                 event.preventDefault();
                 const ingredientId = event.dataTransfer.getData("text").split('-')[1];
-                const ingredientElementId = `ingredient-${ingredientId}-${equivalentClassId}`;
+
+                const existingIngredient = document.querySelector(`#ingredients-list-${equivalentClassId} [id="ingredient-${ingredientId}-${equivalentClassId}"]`);
+                if (existingIngredient) {
+                    appendAlert('This ingredient is already in the equivalence class.', 'warning');
+                    return;
+                }
+                $('#modalIngredientId').val(ingredientId);
+                $('#modalEquivalentClassId').val(equivalentClassId);
+                $('#proportions').modal('show');
+            }
+
+            let editIngredient = false;
+
+            function editProportion(event, ingredientId, equivalentClassId) {
+                event.preventDefault();
 
                 $.ajax({
-                    type: 'POST',
-                    url: "{% url 'update-equivalent-classes' %}",
+                    url: "{% url 'get-proportion' %}",
+                    type: 'GET',
                     data: {
                         'ingredient_id': ingredientId,
-                        'equivalent_class_id': equivalentClassId,
-                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                        'equivalent_class_id': equivalentClassId
                     },
                     success: function (response) {
-                        if (response.success) {
-                            const ingredientElement = document.getElementById(`ingredient-${ingredientId}`);
-                            const ingredientName = ingredientElement.innerText;
-                            console.log(ingredientElementId);
-                            let newElement = document.createElement('li');
-                            newElement.id = ingredientElementId;
-                            newElement.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
-                            newElement.innerHTML = `${ingredientName}
-                           <a class="btn btn-danger rounded-pill"
-                              style="height: fit-content"
-                              href="#confirmDelete"
-                              onclick="confirmDeleteIngredient(${ingredientId}, ${equivalentClassId})"
-                              data-bs-toggle="modal">
-                                 <i class="bi bi-trash"></i>
-                           </a>`;
-                            document.getElementById(`ingredients-list-${equivalentClassId}`).appendChild(newElement);
-
-                            appendAlert(response.success, 'success')
-                        } else {
-                            appendAlert(response.error, 'danger');
-                        }
+                        $('#modalIngredientId').val(ingredientId);
+                        $('#modalEquivalentClassId').val(equivalentClassId);
+                        $('#id_proportion').val(response.proportion);
+                        editIngredient = true;
                     },
                     error: function (error) {
-                        appendAlert('An error occurred: ' + error.status + ' ' + error.statusText, 'danger');
-                        appendAlert(error.statusText, 'danger');
+                        console.log(error);
+                        appendAlert(error.error, 'danger');
                     }
                 });
             }
+
+            $(document).ready(function () {
+                $('#proportionsBtn').on('click', function (event) {
+                    event.preventDefault();
+
+                    const ingredientId = $('#modalIngredientId').val();
+                    const equivalentClassId = $('#modalEquivalentClassId').val();
+                    const proportion = document.getElementById('id_proportion');
+
+                    if (!proportion.value.trim()) {
+                        appendAlert('Please enter the proportion.', 'danger');
+                        proportion.classList.add('is-invalid');
+                        return;
+                    } else {
+                        proportion.classList.remove('is-invalid');
+                    }
+
+                    if (!/^\d+:\d+$/.test(proportion.value)) {
+                        appendAlert('Invalid proportion format. Please use "number:number".', 'danger');
+                        return;
+                    }
+
+                    $.ajax({
+                        type: 'POST',
+                        url: "{% url 'update-equivalent-classes' %}",
+                        data: {
+                            'ingredient_id': ingredientId,
+                            'equivalent_class_id': equivalentClassId,
+                            'proportion': proportion.value,
+                            'csrfmiddlewaretoken': $('#proportionForm input[name="csrfmiddlewaretoken"]').val()
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                document.getElementById('proportionForm').reset();
+                                $('#proportions').modal('hide');
+
+                                const ingredientElementId = `ingredient-${ingredientId}-${equivalentClassId}`;
+                                const ingredientElement = document.getElementById(`ingredient-${ingredientId}`);
+
+                                if (!editIngredient) {
+                                    const ingredientName = ingredientElement.innerText;
+                                    let newElement = document.createElement('li');
+                                    newElement.id = ingredientElementId;
+                                    newElement.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
+                                    newElement.innerHTML = `${ingredientName}
+                                                       <a class="btn btn-primary rounded-pill"
+                                                          style="height: fit-content"
+                                                          href="#"
+                                                          onclick="editProportion(event,${ingredientId},${equivalentClassId})"
+                                                          data-bs-toggle="modal"
+                                                          data-bs-target="#proportions">
+                                                             <i class="bi bi-pencil-square"></i>
+                                                       </a>
+                                                       <a class="btn btn-danger rounded-pill"
+                                                          style="height: fit-content"
+                                                          href="#confirmDelete"
+                                                          onclick="confirmDeleteIngredient(${ingredientId}, ${equivalentClassId})"
+                                                          data-bs-toggle="modal"
+                                                          data-bs-target="#confirmDelete">
+                                                             <i class="bi bi-trash"></i>
+                                                       </a>`;
+                                    document.getElementById(`ingredients-list-${equivalentClassId}`).appendChild(newElement);
+                                }
+                                appendAlert(response.success, 'success');
+                                editIngredient = false;
+                            } else {
+                                appendAlert(response.error, 'danger');
+                            }
+                        },
+                        error: function (error) {
+                            appendAlert('An error occurred: ' + error.status + ' ' + error.statusText, 'danger');
+                            appendAlert(error.statusText, 'danger');
+                        }
+                    });
+                });
+            });
 
             let ingredientToDelete;
             let equivalentClassIdToDelete;
@@ -202,13 +312,11 @@
                 ingredientToDelete = ingredientId;
                 equivalentClassIdToDelete = equivalentClassId;
                 deleteType = 'ingredient';
-                $('#confirmDelete').modal('show');
             }
 
             function confirmDeleteEquivalenceClass(equivalentClassId) {
                 equivalentClassIdToDelete = equivalentClassId;
                 deleteType = 'equivalence_class';
-                $('#confirmDelete').modal('show');
             }
 
             $('#confirmDeleteBtn').on('click', function () {
@@ -274,7 +382,7 @@
                     '</div>'
                 ].join('');
 
-                alertPlaceholder.append(wrapper)
+                alertPlaceholder.append(wrapper);
             }
         </script>
     {% endspaceless %}

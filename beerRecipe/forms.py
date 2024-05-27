@@ -1,3 +1,5 @@
+import re
+
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from crispy_forms.bootstrap import Div, InlineCheckboxes
@@ -177,7 +179,7 @@ class StepForm(forms.ModelForm):
 
 class EquivalenceClassesForm(forms.ModelForm):
     class Meta:
-        model = EquivalentIngredients
+        model = EquivalentClass
         fields = ['name', 'description']
         labels = {
             'name': 'Name',
@@ -190,6 +192,32 @@ class EquivalenceClassesForm(forms.ModelForm):
         self.helper.form_method = 'POST'
         self.helper.layout = Layout(
             Row(Div('name', css_class="col-3"), Div('description', css_class="col-3"), )
+        )
+
+
+class ProportionForm(forms.ModelForm):
+    class Meta:
+        model = EquivalentClass_Ingredients
+        fields = ['proportion']
+        labels = {
+            'proportion': 'Proportion'
+        }
+        widgets = {
+            'proportion': forms.TextInput(attrs={'placeholder': '1:1'})
+        }
+
+    def clean_proportion(self):
+        proportion = self.cleaned_data['proportion']
+        if not re.match(r'^\d+:\d+$', proportion):
+            raise forms.ValidationError("Invalid proportion format. Please use 'number:number'.")
+        return proportion
+
+    def __init__(self, *args, **kwargs):
+        super(ProportionForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'POST'
+        self.helper.layout = Layout(
+            Row(Div('proportion', css_class="col-3"))
         )
 
 

@@ -14,6 +14,7 @@ urlpatterns = [
     path('add-equivalent-classes/', views.add_equivalence_classes_of_ingredients, name='add-equivalent-classes'),
     path('add-equivalent-classes/<int:equivalent_class_id>/', views.add_equivalence_classes_of_ingredients,
          name='add-equivalent-classes'),
+    path('get-proportion/', views.get_proportion, name='get-proportion'),
     path('update-equivalent-classes/', views.update_equivalence_classes_of_ingredients,
          name='update-equivalent-classes'),
     path('remove-ingredient-from-equivalent-class/', views.remove_ingredient_from_equivalent_classes,

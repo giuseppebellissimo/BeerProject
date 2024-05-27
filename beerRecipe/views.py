@@ -120,10 +120,12 @@ def set_default_inventory(request, inventory_id):
 def equivalent_ingredients(request):
     inventory = Inventory.objects.filter(id_user=request.user)
     ingredients = Ingredient.objects.filter(inventory__in=inventory)
-    equivalent_classes = EquivalentIngredients.objects.filter(user=request.user)
+    equivalent_classes = EquivalentClass.objects.filter(user=request.user)
+    proportion_form = ProportionForm()
     context = {
         'ingredients': ingredients,
-        'equivalent_classes': equivalent_classes
+        'equivalent_classes': equivalent_classes,
+        'proportion_form': proportion_form
     }
     return render(request, 'beerRecipe/equivalentIngredients.html', context)
 
@@ -132,12 +134,12 @@ def equivalent_ingredients(request):
 def add_equivalence_classes_of_ingredients(request, equivalent_class_id=None):
     if equivalent_class_id:
         try:
-            equivalent_class = EquivalentIngredients.objects.get(id=equivalent_class_id)
+            equivalent_class = EquivalentClass.objects.get(id=equivalent_class_id)
             initial_data = {
                 'name': equivalent_class.name,
                 'description': equivalent_class.description
             }
-        except EquivalentIngredients.DoesNotExist:
+        except EquivalentClass.DoesNotExist:
             return HttpResponseNotFound({'error': 'Equivalent class does not exist'}, status=404)
     else:
         initial_data = {}
@@ -154,7 +156,7 @@ def add_equivalence_classes_of_ingredients(request, equivalent_class_id=None):
             name = request.POST.get('name')
             description = request.POST.get('description')
             try:
-                equivalent, created = EquivalentIngredients.objects.update_or_create(
+                equivalent, created = EquivalentClass.objects.update_or_create(
                     id=equivalent_class_id,
                     defaults={
                         'name': name,
@@ -182,16 +184,22 @@ def update_equivalence_classes_of_ingredients(request):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             ingredient_id = request.POST.get('ingredient_id')
             equivalent_class_id = request.POST.get('equivalent_class_id')
+            proportion = request.POST.get('proportion')
 
             try:
                 ingredient = Ingredient.objects.get(id=ingredient_id)
-                equivalent_class = EquivalentIngredients.objects.get(id=equivalent_class_id)
-                equivalent_class.ingredients.add(ingredient)
-                equivalent_class.save()
+                equivalent_class = EquivalentClass.objects.get(id=equivalent_class_id)
+                EquivalentClass_Ingredients.objects.update_or_create(
+                    ingredients_id=ingredient.id,
+                    equivalent_class_id=equivalent_class.id,
+                    defaults={
+                        'proportion': proportion
+                    }
+                )
                 return JsonResponse({'success': 'Ingredient added successfully'})
             except Ingredient.DoesNotExist:
                 return JsonResponse({'error': 'Ingredient does not exist'}, status=404)
-            except EquivalentIngredients.DoesNotExist:
+            except EquivalentClass.DoesNotExist:
                 return JsonResponse({'error': 'Equivalent class does not exist'}, status=404)
             except IntegrityError:
                 return JsonResponse({'error': 'Integrity error while adding an equivalent ingredient'}, status=400)
@@ -202,6 +210,18 @@ def update_equivalence_classes_of_ingredients(request):
 
 
 @login_required
+def get_proportion(request):
+    try:
+        ingredient_id = request.GET.get('ingredient_id')
+        equivalent_class_id = request.GET.get('equivalent_class_id')
+        ingredients_equivalent = EquivalentClass_Ingredients.objects.get(ingredients=ingredient_id,
+                                                                         equivalent_class=equivalent_class_id)
+        return JsonResponse({'proportion': ingredients_equivalent.proportion})
+    except EquivalentClass_Ingredients.DoesNotExist:
+        return JsonResponse({'error': 'Equivalent class does not exist'}, status=404)
+
+
+@login_required
 def remove_ingredient_from_equivalent_classes(request):
     if request.method == 'POST':
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -209,13 +229,13 @@ def remove_ingredient_from_equivalent_classes(request):
             equivalent_class_id = request.POST.get('equivalent_class_id')
             try:
                 ingredient = Ingredient.objects.get(id=ingredient_id)
-                equivalent_class = EquivalentIngredients.objects.get(id=equivalent_class_id)
+                equivalent_class = EquivalentClass.objects.get(id=equivalent_class_id)
                 equivalent_class.ingredients.remove(ingredient)
                 equivalent_class.save()
                 return JsonResponse({'success': 'Ingredient removed successfully'})
             except Ingredient.DoesNotExist:
                 return JsonResponse({'error': 'Ingredient does not exist.'}, status=404)
-            except EquivalentIngredients.DoesNotExist:
+            except EquivalentClass.DoesNotExist:
                 return JsonResponse({'error': 'Equivalent class does not exist.'}, status=404)
             except IntegrityError as e:
                 return JsonResponse({'error': str(e)}, status=400)
@@ -228,10 +248,10 @@ def remove_equivalent_classes(request):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             equivalent_class_id = request.POST.get('equivalent_class_id')
             try:
-                equivalent_class = EquivalentIngredients.objects.get(id=equivalent_class_id)
+                equivalent_class = EquivalentClass.objects.get(id=equivalent_class_id)
                 equivalent_class.delete()
                 return JsonResponse({'success': 'Equivalent class removed successfully'})
-            except EquivalentIngredients.DoesNotExist:
+            except EquivalentClass.DoesNotExist:
                 return JsonResponse({'error': 'Equivalent class does not exist.'}, status=404)
     return HttpResponseNotAllowed(['POST'])
 
@@ -355,7 +375,7 @@ def check_missing_ingredients_from_recipe(request):
 @login_required
 def get_equivalent_ingredients(request, ingredient_id, inventory_id, missing_quantity):
     equivalent_ingredients_list = []
-    equivalence_classes = EquivalentIngredients.objects.filter(ingredients=ingredient_id)
+    equivalence_classes = EquivalentClass.objects.filter(ingredients=ingredient_id)
 
     for equivalence_class in equivalence_classes:
         for equivalent in equivalence_class.ingredients.exclude(id=ingredient_id):
