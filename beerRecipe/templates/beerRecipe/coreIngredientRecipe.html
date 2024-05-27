@@ -272,6 +272,8 @@
                         $('#id_name_category').val(data.name_category);
                         $('#id_quantity').val(data.quantity);
                         $('#id_measurement_unit').val(data.measurement_unit);
+                        $('#id_producer').val(data.producer);
+                        $('#id_comment').val(data.comment_form);
                         updateFormset(data);
                         $('#ingredientModal').modal('hide');
                         appendAlert('Ingredient added successfully', 'success');

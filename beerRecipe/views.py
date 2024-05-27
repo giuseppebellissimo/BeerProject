@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import yaml
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -385,15 +387,24 @@ def get_equivalent_ingredients(request, ingredient_id, inventory_id, missing_qua
                     id_inventory=inventory_id,
                 )
 
-                if equivalent_inventory_ingredient.quantity >= abs(missing_quantity):
+                equivalent_class_ingredients = EquivalentClass_Ingredients.objects.get(
+                    ingredients_id=equivalent,
+                    equivalent_class_id=equivalence_class
+                )
+                proportion = equivalent_class_ingredients.proportion
+                proportion_parts = proportion.split(':')
+                first_number = Decimal(proportion_parts[0])
+                second_number = Decimal(proportion_parts[1])
+                proportion_quantity = (first_number / second_number) * abs(missing_quantity)
+
+                if equivalent_inventory_ingredient.quantity >= proportion_quantity:
                     equivalent_ingredients_list.append({
                         'name': equivalent.name,
-                        'available_quantity': equivalent_inventory_ingredient.quantity,
+                        'available_quantity': proportion_quantity,
                         'measurement_unit': equivalent_inventory_ingredient.measurement_unit,
                     })
             except InventoryIngredient.DoesNotExist:
                 continue
-
     return equivalent_ingredients_list
 
 
@@ -644,8 +655,10 @@ def add_selected_ingredients(request):
         'name_ingredient': ingredient.id_ingredient.name,
         'name_category': ingredient.id_ingredient.id_category.id,
         'quantity': ingredient.quantity,
-        'measurement_unit': ingredient.original_unit,
-        'properties': properties_list
+        'measurement_unit': ingredient.measurement_unit,
+        'properties': properties_list,
+        'producer': ingredient.id_ingredient.producer,
+        'comment_form': ingredient.id_ingredient.comment
     }
     return JsonResponse(ingredient_data)
 
@@ -921,7 +934,7 @@ def get_data_formset(request, total_forms):
 @login_required
 def remove_ingredient_from_inventory(request, ingredient_id):
     try:
-        ingredient = Ingredient.objects.get(id=ingredient_id)
+        # ingredient = Ingredient.objects.get(id=ingredient_id)
         inventory_ingredient = InventoryIngredient.objects.get(id_ingredient=ingredient_id)
         inventory = Inventory.objects.get(id=inventory_ingredient.id_inventory.id)
     except Ingredient.DoesNotExist:
@@ -931,7 +944,7 @@ def remove_ingredient_from_inventory(request, ingredient_id):
     except Inventory.DoesNotExist:
         return HttpResponseNotFound({'error': 'Inventory does not exists'}, status=404)
 
-    ingredient.delete()
+    # ingredient.delete()
     inventory_ingredient.delete()
     inventory.save()
     return redirect('list_ingredient', inventory.id)

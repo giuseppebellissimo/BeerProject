@@ -60,7 +60,7 @@ class IngredientRecipeForm(forms.ModelForm):
     name_new_category = forms.CharField(max_length=100)
     measurement_unit = forms.ChoiceField(choices=MEASUREMENT_CHOICES, required=False)
     comment = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control form-control-sm'}), required=False)
-    producer = forms.CharField(max_length=100)
+    producer = forms.CharField(max_length=100, required=False)
 
     class Meta:
         model = IngredientRecipe
