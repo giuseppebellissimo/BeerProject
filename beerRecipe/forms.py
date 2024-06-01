@@ -1,5 +1,3 @@
-import re
-
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from crispy_forms.bootstrap import Div, InlineCheckboxes
@@ -178,20 +176,36 @@ class StepForm(forms.ModelForm):
 
 
 class EquivalenceClassesForm(forms.ModelForm):
+    basic_ingredient = forms.ModelChoiceField(queryset=Ingredient.objects.none())
+
     class Meta:
         model = EquivalentClass
-        fields = ['name', 'description']
+        fields = ['name', 'description', 'basic_ingredient']
         labels = {
             'name': 'Name',
-            'description': 'Description'
+            'description': 'Description',
+            'basic_ingredient': 'Basic Ingredient'
         }
 
     def __init__(self, *args, **kwargs):
         super(EquivalenceClassesForm, self).__init__(*args, **kwargs)
+
+        instance = kwargs.get('instance')
+        used_ingredients = EquivalentClass.objects.values_list('basic_ingredient', flat=True)
+        if instance and instance.pk:
+            available_ingredients = Ingredient.objects.exclude(id__in=used_ingredients).union(
+                Ingredient.objects.filter(id=instance.basic_ingredient.id)
+            )
+        else:
+            available_ingredients = Ingredient.objects.exclude(id__in=used_ingredients)
+
+        self.fields['basic_ingredient'].queryset = available_ingredients
+
         self.helper = FormHelper()
         self.helper.form_method = 'POST'
         self.helper.layout = Layout(
-            Row(Div('name', css_class="col-3"), Div('description', css_class="col-3"), )
+            Row(Div('name', css_class="col-3"), Div('description', css_class="col-3"),
+                Div('basic_ingredient', css_class="col-3"), )
         )
 
 
@@ -202,15 +216,6 @@ class ProportionForm(forms.ModelForm):
         labels = {
             'proportion': 'Proportion'
         }
-        widgets = {
-            'proportion': forms.TextInput(attrs={'placeholder': '1:1'})
-        }
-
-    def clean_proportion(self):
-        proportion = self.cleaned_data['proportion']
-        if not re.match(r'^\d+:\d+$', proportion):
-            raise forms.ValidationError("Invalid proportion format. Please use 'number:number'.")
-        return proportion
 
     def __init__(self, *args, **kwargs):
         super(ProportionForm, self).__init__(*args, **kwargs)

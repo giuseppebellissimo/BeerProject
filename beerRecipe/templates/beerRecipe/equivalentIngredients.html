@@ -67,17 +67,17 @@
                                                         aria-expanded="false"
                                                         aria-controls="flush-collapse{{ equivalent_class.id }}">
 
-                                                    <div class="btn-group">
+                                                    {{ equivalent_class.name }}
+
+                                                    <div class="btn-group" style="margin-left: 10px;">
                                                         <a class="btn btn-primary rounded-pill"
                                                            style="height: fit-content"
                                                            href="{% url 'add-equivalent-classes' equivalent_class.id %}">
-                                                            {{ equivalent_class.name }}
-                                                            <i class="bi bi-pencil-square"
-                                                               style="padding-left: 10px"></i>
+                                                            <i class="bi bi-pencil-square"></i>
                                                         </a>
 
                                                         <a class="btn btn-danger rounded-pill"
-                                                           style="height: fit-content; margin-left: 10px"
+                                                           style="height: fit-content; margin-left: 5px"
                                                            href="#confirmDelete"
                                                            onclick="confirmDeleteEquivalenceClass({{ equivalent_class.id }})"
                                                            data-bs-toggle="modal">
@@ -90,13 +90,15 @@
                                                  class="accordion-collapse collapse"
                                                  data-bs-parent="#accordionEquivalentClasses">
                                                 <div class="accordion-body dropzone"
-                                                     ondrop="dropIngredient(event, {{ equivalent_class.id }})"
+                                                     ondrop="dropIngredient(event, {{ equivalent_class.id }}, {{ equivalent_class.basic_ingredient.id }})"
                                                      ondragover="allowDrop(event)">
 
                                                     <h6>Description</h6>
                                                     <p>{{ equivalent_class.description }}</p>
 
-                                                    <h6>Ingredients</h6>
+                                                    <h6>Ingredient equivalents of
+                                                        <strong>{{ equivalent_class.basic_ingredient.name }}</strong>
+                                                    </h6>
                                                     <ul class="list-group"
                                                         id="ingredients-list-{{ equivalent_class.id }}">
                                                         {% for ingredient in equivalent_class.ingredients.all %}
@@ -199,9 +201,14 @@
                 event.preventDefault();
             }
 
-            function dropIngredient(event, equivalentClassId) {
+            function dropIngredient(event, equivalentClassId, basicIngredientId) {
                 event.preventDefault();
                 const ingredientId = event.dataTransfer.getData("text").split('-')[1];
+
+                if (parseInt(ingredientId) === basicIngredientId) {
+                    appendAlert('This ingredient cannot be added to the equivalence class, because it is a basic ingredient for this equivalence class.', 'warning');
+                    return;
+                }
 
                 const existingIngredient = document.querySelector(`#ingredients-list-${equivalentClassId} [id="ingredient-${ingredientId}-${equivalentClassId}"]`);
                 if (existingIngredient) {
@@ -254,11 +261,6 @@
                         proportion.classList.remove('is-invalid');
                     }
 
-                    if (!/^\d+:\d+$/.test(proportion.value)) {
-                        appendAlert('Invalid proportion format. Please use "number:number".', 'danger');
-                        return;
-                    }
-
                     $.ajax({
                         type: 'POST',
                         url: "{% url 'update-equivalent-classes' %}",
@@ -301,6 +303,7 @@
                                                             </a>
                                                        </div>`;
                                     document.getElementById(`ingredients-list-${equivalentClassId}`).appendChild(newElement);
+                                    document.getElementById('proportionForm').reset();
                                 }
                                 appendAlert(response.success, 'success');
                                 editIngredient = false;

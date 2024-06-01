@@ -42,7 +42,8 @@
 
                     const requiredFields = [
                         'id_name',
-                        'id_description'
+                        'id_description',
+                        'id_basic_ingredient'
                     ]
                     requiredFields.forEach(function (fieldId) {
                         const field = document.getElementById(fieldId);
@@ -61,7 +62,10 @@
                         form_data.append('csrfmiddlewaretoken', document.getElementsByName('csrfmiddlewaretoken')[0].value);
                         form_data.append('name', document.getElementById('id_name').value);
                         form_data.append('description', document.getElementById('id_description').value);
-
+                        form_data.append('basic_ingredient', document.getElementById('id_basic_ingredient').value);
+                        for (let pair of form_data.entries()) {
+                            console.log(pair[0] + ': ' + pair[1]);
+                        }
                         $.ajax({
                             type: 'POST',
                             url: event.target.action,

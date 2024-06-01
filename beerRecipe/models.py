@@ -109,10 +109,11 @@ class EquivalentClass(models.Model):
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=200)
     ingredients = models.ManyToManyField(Ingredient, through='EquivalentClass_Ingredients')
+    basic_ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE, related_name='basic_ingredient')
     user = models.ManyToManyField(User)
 
 
 class EquivalentClass_Ingredients(models.Model):
     ingredients = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
     equivalent_class = models.ForeignKey(EquivalentClass, on_delete=models.CASCADE)
-    proportion = models.CharField(max_length=100)
+    proportion = models.DecimalField(decimal_places=2, max_digits=10)

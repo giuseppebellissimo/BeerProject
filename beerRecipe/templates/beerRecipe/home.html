@@ -154,7 +154,8 @@
                                                 equivalentIngredientsHtml += '<span style="color: darkgreen; padding-left: 40px;">Equivalent Ingredients:</span><br>';
                                                 ingredient.equivalents.forEach(function (equivalent) {
                                                     equivalentIngredientsHtml +=
-                                                        `<span style="padding-left: 60px;">${equivalent.name}: ${equivalent.available_quantity} ${equivalent.measurement_unit}</span><br>`;
+                                                        `<span style="padding-left: 60px;">${equivalent.name}: ${equivalent.available_quantity} ${equivalent.measurement_unit}</span><br>
+                                                         <span style="padding-left: 60px;">Equivalent quantity needed of ${equivalent.name}: ${equivalent.equivalent_quantity_needed} ${equivalent.measurement_unit}</span><br><hr>`;
                                                 });
                                             }
 

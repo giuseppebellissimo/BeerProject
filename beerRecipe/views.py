@@ -139,7 +139,8 @@ def add_equivalence_classes_of_ingredients(request, equivalent_class_id=None):
             equivalent_class = EquivalentClass.objects.get(id=equivalent_class_id)
             initial_data = {
                 'name': equivalent_class.name,
-                'description': equivalent_class.description
+                'description': equivalent_class.description,
+                'basic_ingredient': equivalent_class.basic_ingredient.id
             }
         except EquivalentClass.DoesNotExist:
             return HttpResponseNotFound({'error': 'Equivalent class does not exist'}, status=404)
@@ -147,7 +148,7 @@ def add_equivalence_classes_of_ingredients(request, equivalent_class_id=None):
         initial_data = {}
         equivalent_class = None
     if request.method == 'GET':
-        form = EquivalenceClassesForm(initial=initial_data)
+        form = EquivalenceClassesForm(instance=equivalent_class, initial=initial_data)
         context = {
             'form': form,
             'equivalent_class': equivalent_class
@@ -157,12 +158,16 @@ def add_equivalence_classes_of_ingredients(request, equivalent_class_id=None):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             name = request.POST.get('name')
             description = request.POST.get('description')
+            basic_ingredient = request.POST.get('basic_ingredient')
+
             try:
+                basic_ingredient = Ingredient.objects.get(id=basic_ingredient)
                 equivalent, created = EquivalentClass.objects.update_or_create(
                     id=equivalent_class_id,
                     defaults={
                         'name': name,
-                        'description': description
+                        'description': description,
+                        'basic_ingredient': basic_ingredient
                     }
                 )
                 equivalent.save()
@@ -377,34 +382,34 @@ def check_missing_ingredients_from_recipe(request):
 @login_required
 def get_equivalent_ingredients(request, ingredient_id, inventory_id, missing_quantity):
     equivalent_ingredients_list = []
-    equivalence_classes = EquivalentClass.objects.filter(ingredients=ingredient_id)
+    try:
+        equivalence_classes = EquivalentClass.objects.get(basic_ingredient=ingredient_id)
+        equivalent_class_ingredients = EquivalentClass_Ingredients.objects.filter(equivalent_class=equivalence_classes)
 
-    for equivalence_class in equivalence_classes:
-        for equivalent in equivalence_class.ingredients.exclude(id=ingredient_id):
+        for equivalent_class_ingredient in equivalent_class_ingredients:
+            equivalent = equivalent_class_ingredient.ingredients.id
+
             try:
                 equivalent_inventory_ingredient = InventoryIngredient.objects.get(
                     id_ingredient=equivalent,
                     id_inventory=inventory_id,
                 )
+                proportion = equivalent_class_ingredient.proportion
+                equivalent_quantity_needed = missing_quantity / proportion
+                print(abs(equivalent_quantity_needed))
 
-                equivalent_class_ingredients = EquivalentClass_Ingredients.objects.get(
-                    ingredients_id=equivalent,
-                    equivalent_class_id=equivalence_class
-                )
-                proportion = equivalent_class_ingredients.proportion
-                proportion_parts = proportion.split(':')
-                first_number = Decimal(proportion_parts[0])
-                second_number = Decimal(proportion_parts[1])
-                proportion_quantity = (first_number / second_number) * abs(missing_quantity)
-
-                if equivalent_inventory_ingredient.quantity >= proportion_quantity:
+                if equivalent_inventory_ingredient.quantity >= abs(equivalent_quantity_needed):
                     equivalent_ingredients_list.append({
-                        'name': equivalent.name,
-                        'available_quantity': proportion_quantity,
+                        'name': equivalent_class_ingredient.ingredients.name,
+                        'available_quantity': equivalent_inventory_ingredient.quantity,
                         'measurement_unit': equivalent_inventory_ingredient.measurement_unit,
+                        'equivalent_quantity_needed': f"{abs(equivalent_quantity_needed):.2f}"
+
                     })
             except InventoryIngredient.DoesNotExist:
                 continue
+    except EquivalentClass.DoesNotExist:
+        pass
     return equivalent_ingredients_list
 
 
