@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 import yaml
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -395,8 +393,7 @@ def get_equivalent_ingredients(request, ingredient_id, inventory_id, missing_qua
                     id_inventory=inventory_id,
                 )
                 proportion = equivalent_class_ingredient.proportion
-                equivalent_quantity_needed = missing_quantity / proportion
-                print(abs(equivalent_quantity_needed))
+                equivalent_quantity_needed = missing_quantity * proportion
 
                 if equivalent_inventory_ingredient.quantity >= abs(equivalent_quantity_needed):
                     equivalent_ingredients_list.append({
